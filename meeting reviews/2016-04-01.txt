@@ -1,0 +1,17 @@
+Review:
+We went through the example of the paper Automatic Verification of Iterated Separating
+Conjunctions using Symbolic Execution to see how a symbolic heap looks like.
+
+
+Todo:
++ Go through the Viper paper
++ Go through the Iterated Separating Conjunctions paper (once again)
+- Setup Toolchain
+- Have a look at examples provided (paper and Viper online)
++ Implement example we had a look at.
++ Play with Viper
+
+(
++ Set up repo
++ Documentation scheme
+)

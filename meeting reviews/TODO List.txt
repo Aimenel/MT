@@ -1,0 +1,17 @@
+Z3 path: ...\...\z3.exe (argument to silicon)
+
+
+set Z3_EXE=C:\Users\nadja\Documents\z3-4.4.0-x64-win\bin\z3.exe
+set BOOGIE_EXE=C:\Users\nadja\Documents\boogie\Binaries\Boogie.exe
+
+- Have a look at examples provided (paper and Viper online)
+
+Suggestions:
+- encode deadlock
+- try impelementing examples of paper
+- reason about correctness
+
+- Scala Tutorial
+- Install stuff
+
+

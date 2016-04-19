@@ -1,0 +1,51 @@
+/* Replace all elements of value == from with to 
+ */
+define access(a) forall j: Int :: 0 <= j && j < len(a) ==> acc(loc(a, j).val)
+define untouched(a) forall j: Int :: 0 <= j && j < len(a) ==> loc(a, j).val == old(loc(a, j).val)
+define is_max(i, a, u) forall j: Int :: 0 <= j && j < u ==> loc(a, j).val <= loc(a, i).val
+
+method Replace(a: IArray, left:Int, right:Int, from: Int, to: Int)
+    requires 0 <= left && left < right && right <= len(a)
+    requires forall i:Int :: left <= i && i < right ==> acc(loc(a,i).val)
+    
+    //permission
+    ensures forall i:Int :: left <= i && i < right ==> acc(loc(a, i).val)
+    //functionality
+    ensures old(len(a)) == len(a)
+    //ensures forall i:Int :: left <= i && i < right ==> (old(loc(a, i).val) == from) ? loc(a, i).val == to : (loc(a, i).val == old(loc(a, i).val)); 
+    ensures forall i:Int :: left <= i && i < right && (old(loc(a, i).val) == from) ==> loc(a, i).val == to;
+    ensures forall i:Int :: left <= i && i < right && !(old(loc(a, i).val) == from) ==> (loc(a, i).val == old(loc(a, i).val));
+{
+  if (right - left <= 1) 
+  {
+    if (loc(a, left).val == from) {
+        loc(a,left).val := to;
+    }
+  }
+  else 
+  {
+    var mid :Int := left + (right - left)\2;
+    Replace(a, left, mid, from, to);
+    Replace(a, mid, right, from, to);
+  }
+}
+
+
+/* Encoding of arrays */
+field val: Int
+
+domain IArray {
+  function loc(a: IArray, i: Int): Ref
+  function len(a: IArray): Int
+  function first(r: Ref): IArray
+  function second(r: Ref): Int
+
+  axiom all_diff {
+    forall a: IArray, i: Int :: {loc(a, i)}
+      first(loc(a, i)) == a && second(loc(a, i)) == i
+  }
+
+  axiom len_nonneg {
+    forall a: IArray :: len(a) >= 0
+  }
+}

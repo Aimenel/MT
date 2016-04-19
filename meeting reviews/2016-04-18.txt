@@ -1,0 +1,24 @@
+Review:
+Question about Ref, field, null values:
+Ref is like a 'constant pointer'/id. Acc(ref.field).
+- Fields defined for every Ref. => Classes via restrictions functions on permissions, i.e.
+- null values: acc() ==> not null
+- acc does not return a boolean - it is an assertion and no boolean expression.
+
+Short overview of Carbon code. More next week.
+
+
+Todo:
+- Rewrite Extension part
+- Draft of Initial Presentation Slide
+- Chalice paper
+(- Verification Condition Generation paper)
+- Experiment with Carbon - Boogie
+	carbon.bat --print out.bpl in.sil
+- Have a look at Carbon
+
+
+
+Setup:
+- IntelliJ IDEA (14.0.2)
+

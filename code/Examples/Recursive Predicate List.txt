@@ -1,0 +1,84 @@
+//List Definition
+field data: Int
+field next: Ref
+field head: Ref
+
+predicate List(this:Ref)
+{
+    acc(this.head) && acc(lseg(this.head, null))
+}
+
+
+predicate lseg(this:Ref, end:Ref) 
+{
+    this != end ==> acc(this.data) && acc(this.next) && acc(lseg(this.next, end))
+}
+
+method insert(this:Ref, elem:Int) returns (idx:Int)
+    requires acc(List(this)) 
+    ensures acc(List(this))
+{
+    idx := 0;
+    var tmp: Ref
+    unfold acc(List(this))
+    
+    //not reached end
+    if (this.head != null) 
+    {
+        //locate new node at this head, fold predicates
+        unfold acc(lseg(this.head, null))
+        
+    }
+    
+    if (this.head == null) 
+    {
+        //allow new node at this.head, fold predicates 
+    }
+    else
+    {
+        var hd: Ref := this.head;
+        var ptr: Ref := hd;
+        idx := idx+1;
+        
+        fold acc(lseg(hd, hd))
+        while (ptr.next != null && unfolding acc(lseg(ptr.next, null)) in (ptr.next.data < elem))
+        invariant acc(lseg(hd, ptr)) && acc(ptr.next) && acc(ptr.data)
+        invariant acc(lseg(ptr.next, null))
+        {
+            unfold acc(lseg(ptr.next, null))
+            idx := idx + 1;
+            var ptrn: Ref := ptr.next;
+            fold acc(lseg(ptrn, ptrn));
+            fold acc(lseg(ptr, ptrn));
+            concat(hd, ptr, ptrn); //add to the end of the list
+            ptr := ptrn;
+        
+        }
+        
+        //allocate new node at ptr.next, fold predicates
+
+
+        //without this, no verification => There might be insufficient permission to access lseg(ptr, ned)
+        fold acc(lseg(ptr, null)) 
+        //can't fold acc(lseg(ptr.next, null)) => might be insufficient permission to access this.data
+        //this does not verify assert acc(this.data)
+        //this does not verify either: assert acc(this.next.data)
+        
+        concat(hd, ptr, null)
+    }
+    fold acc(List(this))
+    
+}
+
+method concat(this:Ref, ptr: Ref, end:Ref) 
+    requires acc(lseg(this, ptr)) && acc(lseg(ptr, end))
+    requires end != null ==> acc(end.next, 1/2) //not forming cycle
+    ensures acc(lseg(this, end))
+    ensures end!= null ==> acc(end.next, 1/2)
+{
+    if (this != ptr) {
+        unfold acc(lseg(this, ptr)); 
+        concat(this.next, ptr, end);
+        fold acc(lseg(this, end));
+    }
+}

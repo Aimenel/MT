@@ -1,0 +1,48 @@
+Review:
+Discussed overlapping permissions inhale:
+- assert false : check correct inhales
+- assume false ==> false is correct
+
+Todo:
++ write project description
++ add master thesis project to mystudies
++ send viper example with ?
+
+
+Notes:
+- combination of pure & permission
+- anything boolean on the left of ==>
+
+Most general case with Restriction
+
+predicates
+wands?
+nested support for permission based
+
+
+- project description: liberasation of (combinations && ...), other features (wands, predicates), nesting
+- for some maybe decide not to support it
+
+description
+
+-------
+
+concrete goals: 
+- which to support
+- what it means
+
+implementing (two tools)
+
+testing & evaluating
+
+core:
+predicates, mixing (both tools, etc....)
+
+onpaper approach for other things
+
+extensions:
+
+
+
+
+

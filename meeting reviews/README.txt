@@ -1,0 +1,1 @@
+Each file represents the summary of the meeting held on the date of its title.

@@ -1,0 +1,16 @@
+//Array domain definition
+domain Array {
+    function loc(a:Array, i:Int): Ref
+    function len(a:Array): Int
+    function loc_a(r:Ref) : Array
+    function loc_i(r:Ref) : Int
+    
+    //injective function
+    //trigger {loc(a,i)} : let's SMT solver instantiate the quantifier with x and y whenever it knows about a term loc(x, y)
+    //When no trigger is provided, Viper attempts to infer triggers automatically (less performance)
+    axiom loc_injective {forall a:Array, i:Int :: {loc(a,i)} 0<= i  && i < len(a) ==> loc_a(loc(a,i)) == a && loc_i(loc(a, i)) == i}
+    
+    //non-negative length
+    axiom length_nonneg{ forall a:Array :: 0 <=len(a) }
+
+}

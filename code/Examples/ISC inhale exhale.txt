@@ -1,0 +1,52 @@
+
+method test(a: IArray) 
+requires forall x:Int :: 0 <= x  && x <= 4 ==> acc(loc(a, x).val)
+
+ensures forall x:Int :: 0 <= x  && x <= 4 ==> acc(loc(a, x).val) //verifies
+{
+    inhale forall x:Int :: 0 <= x  && x <= 4 ==> acc(loc(a, x).val)
+    exhale forall x:Int :: 0 <= x  && x <= 4 ==> acc(loc(a, x).val) //verifies
+    
+    
+    inhale forall x:Int :: 0 <= x && x <= 4 ==> loc(a, x).val == 4;
+    inhale forall x:Int :: 1 <= x && x <= 2 ==> loc(a, x).val == 2;
+    
+    assert forall x:Int :: 1 <= x && x <= 2 ==> loc(a, x).val == 2; //verifies
+    assert forall x:Int :: 0 <= x && x <= 4 ==> loc(a, x).val == 4; //verifies
+
+    loc(a, 0).val := 2;
+    //doesn't verify: exhale forall x:Int :: 0 <= x && x <= 4 ==> loc(a, x).val == 4;
+    assert forall x:Int :: 0 <= x && x <= 2 ==> loc(a, x).val == 2; //verifies
+
+    inhale forall x:Int :: 0 <= x && x <= 4 ==> loc(a, x).val == 4;
+    assert loc(a, 0).val == 2; //verifies
+    exhale forall x:Int :: 0 <= x && x <= 4 ==> loc(a, x).val == 4; //verifies
+	
+	
+	loc(a, 0).val := 4;
+    exhale acc(loc(a, 0).val);
+    inhale acc(loc(a, 0).val);
+    //does not verify: assert(loc(a, 0).val == 4);
+	
+	assert forall x:Int :: x > 3 ==> x > 2; //verifies
+}
+
+
+/* Encoding of arrays */
+field val: Int
+
+domain IArray {
+  function loc(a: IArray, i: Int): Ref
+  function len(a: IArray): Int
+  function first(r: Ref): IArray
+  function second(r: Ref): Int
+
+  axiom all_diff {
+    forall a: IArray, i: Int :: {loc(a, i)}
+      first(loc(a, i)) == a && second(loc(a, i)) == i
+  }
+
+  axiom length_nonneg {
+    forall a: IArray :: len(a) >= 0
+  }
+}
