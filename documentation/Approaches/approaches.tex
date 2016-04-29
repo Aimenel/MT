@@ -1,0 +1,45 @@
+
+\title{\bf{Appraoches}}
+
+\documentclass[12pt]{article}
+
+\begin{document}
+\maketitle
+
+\section{Predicate Quantifier}
+New Definition:
+
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) ==>\mathbf{acc}( pred(e_1(x), ... ,e_n(x)), p(x) )
+\end{equation}
+
+where {\it c(x)} is  a boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
+
+\subsection{Inverse Function}
+
+\[ \mathbf{Given: \; } \mathbf{forall} \; x:T :: c(x) ==> \mathbf{acc}( pred(e_1(x), ... ,e_n(x)), p(x) )   \]
+Let  $pred^{- 1}$ be a new funciton, where the following two inversion functions are true:
+
+INV-1:
+\[ \forall val_1, ..., val_n :: c(pred^{-1} (val_1, ..., val_n) => \]
+\[ e_1 (pred^{-1} (val_1, ..., val_n)) == val_1 \: \&\&  ... \: \&\&  \:\: e_n(pred^{-1} (val_1, ..., val_n)) == val_n\]
+
+
+INV-2:
+\[ \forall x:T :: c(x) => pred^{-1}(e_1(x), ..., e_n(x)) == x\]
+
+\subsection{Injectivity}
+The mapping from input parameter to predicate has to be injective. Otherwise, there might not be a valid inverse function:
+
+
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) ==> \mathbf{acc}( 1, ... ,1), p(x) ) ,
+\end{equation}
+
+There exists no inverse function for this example.
+
+\subsection{Keeping track of known-folded permissions under predicate instances}
+
+I would instantiate a predicate and its map separately at first use.
+
+\end{document}

@@ -7,3 +7,6 @@ documentation/Carbon/carbon.aux
 documentation/Carbon/carbon.pdf
 presentations/Initial Presentation/Inital Presentation.pdf
 documentation/Carbon/carbon.synctex.gz
+*.aux
+*.gz
+documentation/Approaches/approaches.pdf
