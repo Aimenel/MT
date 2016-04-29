@@ -3,15 +3,12 @@ Z3 path: ...\...\z3.exe (argument to silicon)
 
 set Z3_EXE=C:\Users\nadja\Documents\z3-4.4.0-x64-win\bin\z3.exe
 set BOOGIE_EXE=C:\Users\nadja\Documents\boogie\Binaries\Boogie.exe
+carbon.bat --print out.bpl in.sil
 
-- Have a look at examples provided (paper and Viper online)
+TODO:
+- fix bug in carbon
+- theory version of predicate handling
 
-Suggestions:
-- encode deadlock
-- try impelementing examples of paper
-- reason about correctness
-
+Suggestion:
 - Scala Tutorial
-- Install stuff
-
-
+- setup workplace pc

@@ -1,0 +1,10 @@
+Review:
+- Description review: Combinations
+- Slide review: Allowed only field locations
+- Overview Code part II: DefaultStmt default stmt handler.
+
+Todo:
+- Rewrite Combinations
+- Rewrite Slide examples
+- Try working on issue 118
+- On paper development idea for Predicates

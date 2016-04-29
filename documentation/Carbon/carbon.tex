@@ -1,0 +1,55 @@
+\title{\bf{Generalised Verification for Quantified Permissions}}
+
+\date{\today}
+
+\documentclass[12pt]{article}
+
+\begin{document}
+\maketitle
+
+\section{read}
+
+\section{write this.x}
+\begin{itemize}
+\item check this not null
+\item check has permission
+\item update Heap
+\item check Full permission
+\end{itemize}
+
+\section{inhale pure expression}
+\begin{itemize}
+\item well-formed check: this not null, has permition
+\item adapt PostHeap
+\end{itemize}
+
+\section{exhale pure expression}
+\begin{itemize}
+\item havoc ExhaleHeap
+\item check permission and not null in case of read
+\item remove permission
+\item check expression evaluates to true
+\item Heap = havoc Heap with assumed known locations
+\end{itemize}
+
+\section{Quantified Permissions}
+\subsection{Inhale}
+\begin{itemize}
+\item define inverse function (two assume)
+\item assume all fields accessed in quantified permissions are not null
+\item assume injective access
+\item assume: add permission to Mask for all locations via inverse function
+\item assume: no change other values
+\item update Mask to changed Mask
+\end{itemize}
+
+
+\subsection{Exhale}
+\begin{itemize}
+\item assert receiver not null 
+\item assert sufficient permissions to read field
+\item assert receiver injective
+\item assumptions for inverse of receiver
+\item remove permissions from call
+\end{itemize}
+\end{document}

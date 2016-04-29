@@ -1,0 +1,11 @@
+//assert false
+field x:Int
+
+method foo(this:Ref) 
+requires acc(this.x)
+requires this.x == 4
+ensures acc(this.x) 
+ensures this.x == 3 
+{
+    this.x := 3
+}

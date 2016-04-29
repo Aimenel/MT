@@ -9,16 +9,16 @@ Short overview of Carbon code. More next week.
 
 
 Todo:
-- Rewrite Extension part
-- Draft of Initial Presentation Slide
-- Chalice paper
++ Rewrite Extension part
++ Draft of Initial Presentation Slide
++ Chalice paper
 (- Verification Condition Generation paper)
-- Experiment with Carbon - Boogie
++ Experiment with Carbon - Boogie
 	carbon.bat --print out.bpl in.sil
-- Have a look at Carbon
++ Have a look at Carbon
 
 
 
 Setup:
-- IntelliJ IDEA (14.0.2)
++ IntelliJ IDEA (14.0.2)
 

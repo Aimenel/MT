@@ -3,7 +3,7 @@
 	\bf{Master Thesis Project Description} \\
         	Nadja M\"uller \\
 	\\
-	Superivsed by Alexander Summers, Prof. Dr. Peter M\"uller\\
+	Supervised by Alexander Summers, Prof. Dr. Peter M\"uller\\
 	 Department of Computer Science \\
 	ETH Z\"urich \\
 }
@@ -17,7 +17,7 @@
 \section{Description}
 This project is intended to extend Viper \cite{viper}, a verification infrastructure for permission-based reasoning. It includes several front-ends which translate given programs to Viper's intermediate language Silver. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
 
-There are currently three features of Silver handling unbounded heap structures. Using predicates, it can handle datastructures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial datastructure and quantified permissions \cite{isc} allows us to express pointwise specifications. 
+There are currently three features of Silver handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structure and quantified permissions \cite{isc} allows us to express pointwise specifications. 
 
 The support of quantified permissions is still limited. In Viper, the structure of a quantified permissions is defined as:
 \newline 
@@ -30,26 +30,28 @@ where {\it c(x)} is  a boolean expression,{\it e(x)} an injective reference-type
 The goal of this project is to generalise this form and make the expression of quantified permissions as liberal as possible. New extensions we consider in this project are to further allow combinations of multiple quantified permissions, mixing quantified permissions with pure quantifiers, as well as supporting interactions with other Viper features such as predicates and magic wands.
 
 \section{Core Goals}
-The core goals for this project are to extend the support of quantified permissions. In particular, we want to design an approach to following extensions: 
+The core goals for this project are to extend the support of quantified permissions. In particular, we want to design an approach to handle: 
 \begin{itemize}
 \item nested quantified permissions
 \item combinations of quantified pure and permission-based assertions
-\item predicates 
-\item magic wands
+\item support of predicates within quantified permissions
+\item support of magic wands within quantified permissions
 \end{itemize}
 
-Additionally we aim to implement following structues both in Silicon and Carbon, as well as test its functionality and performance:
+Additionally we aim to implement following features both in Silicon and Carbon, as well as test their functionality and performance:
 \begin{itemize}
 \item combinations of quantified pure and permission-based assertions
-\item predicates 
+\item support of predicates within quantified permissions 
 \end{itemize}
 
 %Extensions
 \section{Extensions}
-As an extensions, the implementation the following features in either Carbon or Silicon is possible:
+As an extensions, the following features could additionally be implemented and tested:
 \begin{itemize}
-\item magic wands
-\item nested quantified permissions
+\item support of magic wands within quantified permissions in Carbon
+\item support of magic wands within quantified permissions in Silicon
+\item nested quantified permissions in Carbon 
+\item nested quantified permissions in Silicon
 \end{itemize}
 
 \bibliographystyle{unsrt}
