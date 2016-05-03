@@ -7,9 +7,64 @@
 \begin{document}
 \maketitle
 
-\section{read}
+\section{Frontend}
 
-\section{write this.x}
+\subsection{Carbon.scala}
+Main class: Carbon extending CarbonFrontend. Defines method main only.
+
+
+The file additionally contains:
+\begin{itemize}
+\item \textbf{CarbonFrontend:} extends SiliconFrontend and overwrites createVerifier, configureVerifier to create carbonInstance.
+\item \textbf{CarbonConfig:} parses commandline arguments (proverLog, print, boogieOpt, boogieExe, z3Exe)
+\end{itemize}
+
+\subsection{SiliFrontend.scala}
+\subsubsection{execute}
+Main method that parses command-line arguments, parses the input file and passes the  SIL program to the verifier. The resulting error messages (if any) will be shown in a user-friendly fashion.
+\begin{itemize}
+\item create verifier (overwritten in Carbon Frontend)
+\item parse command line arguments (overwritten in CarbonFrontend)
+\item initializeLazyScallopConfig()
+\item printHeader
+\item initialize translator
+\item verify: run the parser, typechecker and verifier ($CarbonVerifier.verify()$)
+\item printFinishHeader
+\item printSucess/printErrors: print result
+\end{itemize}
+
+\subsection{SilFrontEndConfig}
+Defines command-line flags:
+\begin{itemize}
+\item dependiencies: Print full information about dependencies (boogie and Z3 tools)
+\item no-timing: Don't display timing information
+\item methods: SIL methods that should be verified, :all means all methods.
+\item ignoreFile: ignore the file in particular
+\item ideMode: Report errors in the format $<file>,<line>:<col>: <message>$, and write errors in the format $<file>,<line>:<col>,<line>:<col>,<message>$ to a file (see option ideModeErrorFile).
+\item ideModeErrorFile: set File to which error should be written. Defualt> errors.log
+\end{itemize}
+
+\section{Verifier}
+\subsection{verify}
+\begin{itemize}
+\item reset all modules
+\item mainModule.translate(program): start translating program from DefaultMainModule.scala
+\item handle bogie stuff
+\end{itemize}
+
+\section{Moduels}
+
+\subsection{DefaultMainModule}
+The Default Main Module gets called at translate:
+\begin{itemize}
+\exchange program to AST (Ast.scala, Transformer.scala)
+\end{itemize}
+
+
+\section{Translation}
+\subsection{read}
+
+\subsection{write this.x}
 \begin{itemize}
 \item check this not null
 \item check has permission
@@ -17,13 +72,13 @@
 \item check Full permission
 \end{itemize}
 
-\section{inhale pure expression}
+\subsection{inhale pure expression}
 \begin{itemize}
 \item well-formed check: this not null, has permition
 \item adapt PostHeap
 \end{itemize}
 
-\section{exhale pure expression}
+\subsection{exhale pure expression}
 \begin{itemize}
 \item havoc ExhaleHeap
 \item check permission and not null in case of read
@@ -32,8 +87,8 @@
 \item Heap = havoc Heap with assumed known locations
 \end{itemize}
 
-\section{Quantified Permissions}
-\subsection{Inhale}
+\subsection{Quantified Permissions}
+\subsubsection{Inhale}
 \begin{itemize}
 \item define inverse function (two assume)
 \item assume all fields accessed in quantified permissions are not null
@@ -44,7 +99,7 @@
 \end{itemize}
 
 
-\subsection{Exhale}
+\subsubsection{Exhale}
 \begin{itemize}
 \item assert receiver not null 
 \item assert sufficient permissions to read field

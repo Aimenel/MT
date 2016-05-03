@@ -1,0 +1,26 @@
+
+field f:Int;
+
+predicate P(x:Ref, y:Int) {
+    y >= 0 ==> acc(x.f)
+}
+
+method m(a:Ref, s:Set[Ref]]) 
+    requires (a in s)
+	ensures acc(P(a,0))
+{
+    inhale forall r:Ref :: (r in s) ==> acc(P(r,0))
+	unfold P(a, 0)
+	
+    var v1:Int := a.f
+	a.f := 2
+    
+    fold P(a, 0)
+	exhale acc(P(a, 0))
+	exhale forall r:Ref :: (r in s) && r!=a ==> acc(P(r, 0))
+}
+
+
+
+
+
