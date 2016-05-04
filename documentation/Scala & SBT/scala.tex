@@ -1,3 +1,5 @@
+
+
 \title{\bf{Scala and SBT}}
 \author{
         	Nadja M\"uller
@@ -5,12 +7,35 @@
 \date{\today}
 
 \documentclass[12pt]{article}
+\usepackage{listings}
+
+% "define" Scala
+\lstdefinelanguage{scala}{
+  morekeywords={abstract,case,catch,class,def,%
+    do,else,extends,false,final,finally,%
+    for,if,implicit,import,match,mixin,%
+    new,null,object,override,package,%
+    private,protected,requires,return,sealed,%
+    super,this,throw,trait,true,try,%
+    type,val,var,while,with,yield},
+  otherkeywords={=>,<-,<\%,<:,>:,\#,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]"""
+}
 
 \begin{document}
+
+
 \maketitle
 
 \section{SBT Getting Started}
 \subsection{directory}
+
+\begin{lstlisting}
 src/
   main/
     resources/
@@ -26,5 +51,88 @@ src/
        <test Scala sources>
     java/
        <test Java sources>
+\end{lstlisting}
+
+
+\section{Scala}
+
+\subsection{Syntax}
+\subsubsection{object}
+Singleton object: a class with a single instance. This class is created on demand, the first time it is used.
+
+\subsubsection{class}
+Classes in Scala can have parameters.
+
+\begin{lstlisting} [language=scala]
+
+
+class Complex(real: Double, imaginary: Double) {
+	...
+	def re = real	
+	def im = imaginary
+	...
+}
+
+\end{lstlisting}
+
+Cases classes:
+\begin{itemize}
+\item Var (String)
+\item Const (Int)
+\end{itemize}
+
+A new keyword is not mandatory to create instances of a class.
+
+\subsubsection{Method calls}
+
+Method taking one argument can be used with an infix syntax.
+
+\begin{lstlisting} [language=scala]
+	def re() = real
+	def im() = imaginary
+
+	//method declaration without arguments
+	def re = real
+	def im = imaginary
+\end{lstlisting}
+
+
+\subsubsection{Interaction with Java}
+All classes from the java.lang package are imported by default, while other need to be imported explicitly.
+
+For example:
+\begin{lstlisting} [language=scala]
+//multiple classes
+import java.util.{Date, Locale} 
+//single class
+import java.text.DateFormat 
+//all classes in package
+import java.text.DateFormat._ 
+
+object FrenchDate {
+	def main(args: Array[String]) {
+		//creation of Java class Date
+		val now = new Date 
+		//method call
+		val df = getDateInstance(LONG, Locale.FRANCE) 
+		
+		//infix format call		
+		println(df format now)
+		//equivalent method call		
+		df.format(now)
+
+	}
+}
+\end{lstlisting}
+
+\subsection{Inheritance}
+All classes in Scala inherit from a super-class. When no super-class is specified, $scala.AnyRef$ is implicitly used.
+
+\subsubsection{Overriding}
+
+\begin{lstlisting} [language=scala]
+override def toString() = ...
+\end{lstlisting}
+
 
 \end{document}
