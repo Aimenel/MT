@@ -1,0 +1,12 @@
+Done:
+- scala map (x => somestuff(x, x+2, 13)
+- unfolding && folding predicates => quantified permissions?
+
+To Do:
+- implement quantified predicate support (inhale, exhale priorized)
+- test
+- mail on thursday midday.
+
+Probably won't have to do anything, but have a look at:
+- look at predicate version numbers (new on fold)
+- look at predicate masks known-folded -> P#sm(...) fields

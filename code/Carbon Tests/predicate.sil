@@ -8,6 +8,7 @@ predicate P(x:Ref, y:Int) {
 method m(a:Ref) 
     requires acc(P(a,0))
 	ensures acc(P(a,0))
+	ensures unfolding P(a,0) in a.f == 2
 {
     unfold P(a, 0)
     var v1:Int := a.f
