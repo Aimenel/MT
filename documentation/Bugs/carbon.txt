@@ -1,0 +1,62 @@
+Missing test cases:
+- injectivity
+- known-folded knowledge
+- partial access rights?
+- wildcards
+
+
+Bugs:
+Forall 11.11, 39.11 insufficient permissions
+
+There's a problem with independent precdicates and magic wands.
+
+Weirdly: forall test01: works if you swap the requires. does not in the following order (insufficient permissions):
+In hindsight, not so weird: This is due to the fact that the h(x) is less resitrictive to the access pattern. Therefore all the added permissions get taken along.
+
+field f: Int
+
+predicate h(a:Ref) {
+	acc(a.f)
+}
+
+
+method test01(xs: Set[Ref], ys: Seq[Ref])
+  requires forall x: Ref :: x in xs ==> acc(h(x))
+  requires forall i: Int :: i in [0..|ys|) ==> acc(h(ys[i]))
+
+
+  ensures forall x: Ref :: x in xs ==> acc(h(x))
+  ensures forall i: Int :: i in [0..|ys|) ==> acc(h(ys[i]))
+{}
+
+
+
+    assume (forall x_4: Ref ::
+      { PostMask[null, h(x_4)] }
+      (xs[x_4] ==> QPMask[null, h(x_4)] == PostMask[null, h(x_4)] + FullPerm) && (!xs[x_4] ==> QPMask[null, h(x_4)] == PostMask[null, h(x_4)])
+    ) && (forall x_4: Ref ::
+      { QPMask[null, h(x_4)] }
+      (xs[x_4] ==> QPMask[null, h(x_4)] == PostMask[null, h(x_4)] + FullPerm) && (!xs[x_4] ==> QPMask[null, h(x_4)] == PostMask[null, h(x_4)])
+    );
+	
+	    assume (forall i_4: int ::
+      { PostMask[null, h(Seq#Index(ys, i_4))] }
+      (Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))] + FullPerm) && (!Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))])
+    ) && (forall i_4: int ::
+      { QPMask[null, h(Seq#Index(ys, i_4))] }
+      (Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))] + FullPerm) && (!Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))])
+    );
+
+    assert {:msg "  Postcondition of test01 might not hold. There might be insufficient permission to access h(x). (test.sil@11.11) [13]"}
+      (forall x_6: Ref ::
+      
+      xs[x_6] ==> Mask[null, h(x_6)] >= FullPerm
+    );
+
+
+    assert {:msg "  Postcondition of test01 might not hold. There might be insufficient permission to access h(ys[i]). (test.sil@12.11) [15]"}
+      (forall i_6: int ::
+      
+      Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_6) ==> Mask[null, h(Seq#Index(ys, i_6))] >= FullPerm
+    );
+	
