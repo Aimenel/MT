@@ -1,13 +1,16 @@
 Missing test cases:
-- injectivity
-- known-folded knowledge
 - partial access rights?
 - wildcards
 
 
 Bugs:
-Forall 11.11, 39.11 insufficient permissions
+injectivity.sil
+------------------------------------------------
+Triggers should be adapted to check whether they are dependent on the forall variable
 
+
+Forall 11.11, 39.11 insufficient permissions
+------------------------------------------------
 There's a problem with independent precdicates and magic wands.
 
 Weirdly: forall test01: works if you swap the requires. does not in the following order (insufficient permissions):
@@ -58,5 +61,37 @@ method test01(xs: Set[Ref], ys: Seq[Ref])
       (forall i_6: int ::
       
       Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_6) ==> Mask[null, h(Seq#Index(ys, i_6))] >= FullPerm
+    );
+	
+	
+Solution:
+
+IndependentLocations (All non-predicate fields && predicates not matching the pattern)
+
+Not Predicate
+assume (forall <A, B> o_2: Ref, f_4: (Field A B) ::
+      
+      !IsPredicateField(f_4) ==> Mask[o_2, f_4] == QPMask[o_2, f_4]
+    );
+
+
+    assume (forall i_4: int ::
+      { PostMask[null, h(Seq#Index(ys, i_4))] }
+      (Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))] + FullPerm) && (!Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))])
+    ) && (forall i_4: int ::
+      { QPMask[null, h(Seq#Index(ys, i_4))] }
+      (Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))] + FullPerm) && (!Seq#Contains(Seq#Range(0, Seq#Length(ys)), i_4) ==> QPMask[null, h(Seq#Index(ys, i_4))] == PostMask[null, h(Seq#Index(ys, i_4))])
+    );
+
+
+Predicate:
+	assume (forall <A, B> o_2: Ref, f_4: (Field A B) ::  
+      IsPredicateField(f_4) && notThatPredicate ==> Mask[o_2, f_4] == QPMask[o_2, f_4]
+    );
+
+
+    assume (forall <A, B> o_2: Ref, f_4: (Field A B),  x_10:int ::
+	     {QPMask[o_2, f_4], Mask[o_2, f_4], QPMask[null, p2(a_4, x_10)], Mask[null, p2(a_4, x_10)]}
+      (IsPredicateField(f_4) && f_4!= p2(a_4, x_10) ==> Mask[o_2, f_4] == QPMask[o_2, f_4])
     );
 	
