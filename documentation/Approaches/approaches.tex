@@ -2,11 +2,11 @@
 \title{\bf{Appraoches}}
 
 \documentclass[12pt]{article}
+\usepackage{mathtools}
 
 \begin{document}
 \maketitle
 \section{Pure Quantifiers}
-Pure Quantifiers are handled seperately by the ? module.
 \section{Fields}
 \section{Predicate Quantifier}
 New Definition:
@@ -19,7 +19,7 @@ where {\it c(x)} is  a boolean expression,$pred(e_1(x), ... ,e_n(x))$ an injecti
 
 \subsection{Inverse Function}
 
-\[ \mathbf{Given: \; } \mathbf{forall} \; x:T :: c(x) ==> \mathbf{acc}( pred(e_1(x), ... ,e_n(x)), p(x) )   \]
+\[ \mathbf{Given: \; } \mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}( pred(e_1(x), ... ,e_n(x)), p(x) )   \]
 Let  $pred^{- 1}$ be a new funciton, where the following two inversion functions are true:
 
 INV-1:
@@ -35,17 +35,68 @@ The mapping from input parameter to predicate has to be injective. Otherwise, th
 
 
 \begin{equation}
-	\mathbf{forall} \; x:T :: c(x) ==> \mathbf{acc}( 1, ... ,1), p(x) ) ,
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}( 1, ... ,1), p(x) ) ,
 \end{equation}
+
+It sufficies that only one variable is not injective
 
 There exists no inverse function for this example.
 
 \section{Combinations}
+A combination of \&\& will be desugared into two equations - or at least marginally treated as such.
+
+
+A combination of or, implies will be transformed into an additional part of the condition c(x).
 
 \subsection{and}
+\subsubsection{pure and permission}
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow (b(x) \&\& \mathbf{acc}(e(x).f, p(x))
+\end{equation}
 
+Desugaring to:
+\begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; x:T :: c(x)  \Rightarrow b(x)\\
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}(e(x).f, p(x))
+\end{aligned}
+\end{equation}
+
+\subsubsection{permission and permission}
+
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow ( \mathbf{acc}(e_1(x).f, p_1(x) \&\& \mathbf{acc}(e_2(x).f, p_2(x) ))
+\end{equation}
+
+Desugaring to:
+\begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}(e_1(x).f, p_1(x))\\
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}(e_2(x).f, p_2(x))
+\end{aligned}
+\end{equation}
+
+Implementing this by reusing parts from the before implementations should spare evaluating the same values twice and possibly defining a new Mask. Additionally the independent location description could be fused into one expression (in carbon).
+%or
 \subsection{or}
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow (b(x) \| \mathbf{acc}(e(x).f, p(x) ))
+\end{equation}
 
+Desugaring to:
+\begin{equation}
+	\mathbf{forall} \; x:T :: (c(x) \:\&\&\: not(b(x))) \Rightarrow  \mathbf{acc}(e(x).f, p(x))
+\end{equation}
+
+%implies
 \subsection{implies}
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow (b(x) \Rightarrow \mathbf{acc}(e(x).f, p(x))
+\end{equation}
+
+Desugaring to:
+\begin{equation}
+	\mathbf{forall} \; x:T ::( c(x) \:\&\&\: b(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x))
+\end{equation}
 
 \end{document}
