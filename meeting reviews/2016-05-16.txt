@@ -1,0 +1,11 @@
+- add function for defining predicate with id
+- check wildcard support
+- finish predicate support stuff
+
+Notes:
+- const unique Field per Predicate in preamble in Translation of predicate with axiom: 
+- function from Field to that field
+- similar to isPredicateField
+
+- quantifier with inverse Function
+

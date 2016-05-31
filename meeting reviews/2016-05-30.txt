@@ -1,0 +1,7 @@
+TODO:
+- wrapper function for PredIdMap value instead of revealing the mapping itself
+- reset() in DefaultHeapModule: reset Map and Counter
+- add wildcard permission check for fields and do pull request
+
+- AllFreeAssumptions not working with quantifiers: fix bug so that new test case works (DefaultExpModule)
+

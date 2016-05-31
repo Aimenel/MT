@@ -1,4 +1,6 @@
 Missing test cases:
-- partial access rights?
-- wildcards
 - varible renaming check
+
+Bugs:
+- pure forall expression with predicates
+
