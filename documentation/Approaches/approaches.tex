@@ -7,6 +7,7 @@
 \begin{document}
 \maketitle
 \section{Pure Quantifiers}
+Add trigger if needed and translate the Expression
 \section{Fields}
 \section{Predicate Quantifier}
 New Definition:
@@ -98,5 +99,55 @@ Desugaring to:
 \begin{equation}
 	\mathbf{forall} \; x:T ::( c(x) \:\&\&\: b(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x))
 \end{equation}
+\section{Nested Quantifiers}
+With the rewriting mentioned above, there will be two ways which make sense to support nested quantifiers:
+\begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; x:T_1, y:T_2 :: c(x) \Rightarrow \mathbf{acc}(e_1(x, y).f, p(x, y))\\
+	\mathbf{forall} \; x:T_1 :: c_1(x) \Rightarrow (\mathbf{forall} \; y:T_2 :: c_2(x, y) \Rightarrow \mathbf{acc}(e_2(x, y).f, p(x,y)))
+\end{aligned}
+\end{equation}
 
+The second vairant can easily be rewritten to the first structure:
+\begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; x:T_1, y:T_2 :: (c_1(x)  \:\&\&\: c_2(x, y)) \Rightarrow \mathbf{acc}(e_1(x, y).f, p(x, y))\\
+\end{aligned}
+\end{equation}
+
+For that case, the inverse functions would be:
+
+\subsection{Injectivity Check}
+each combination of parameter should point to different locations.
+\begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; v1_1:T_1, v2_1:T_1, ..., v1_n:T_n, v2_n:T_n  :: \\
+	(c(v1_1,..., v1_n) \:\&\&\:  c(v2_1, v2_n)  \:\&\&\:  ((v1_1 != v1_1) \| ... \| (v_1n != v_2n)) \\
+ 	\Rightarrow \mathbf{acc} e_1(v1_1,..., v1_n)  != e_1(v2_1,..., v2_n) \\
+\end{aligned}
+\end{equation}
+
+\subsection{Inverse Function}
+Inverse Function 1:
+\begin{equation}
+\begin{aligned}
+\mathbf{forall} \; v1:T_1,  v_n:T_n  :: (c(v_1,..., v_n) \\
+\Rightarrow \mathbf{inv_1}(e(v_1,..., v_n))  == v_1 \\
+... \\
+\mathbf{forall} \; v1:T_1,  v_n:T_n  :: (c(v_1,..., v_n) \\
+ \Rightarrow \mathbf{inv_n}(e(v_1,..., v_n))  == v_n \\
+\end{aligned}
+\end{equation}
+
+Inverse Function 2:
+\begin{equation}
+\begin{aligned}
+\mathbf{forall} \; o:Ref  :: (c( \mathbf{inv_1}(o), ...,  \mathbf{inv_n}(o)) \\
+ \Rightarrow e(\mathbf{inv_1}(o))  == o \\
+...\\
+\mathbf{forall} \; o:Ref  :: (c( \mathbf{inv_1}(o), ...,  \mathbf{inv_n}(o))\\
+ \Rightarrow e(\mathbf{inv_1}(o))  == o 
+\end{aligned}
+\end{equation}
 \end{document}
+
