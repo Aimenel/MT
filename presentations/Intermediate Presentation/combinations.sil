@@ -1,0 +1,21 @@
+field f: Int
+field g:Int
+
+method m1(r:Ref, xs:Seq[Ref], i:Int)
+requires r in xs
+requires forall x:Ref :: x in xs ==> ((i >= 0) ==> acc(x.f)) && ((i < 0) ==> acc(x.g))
+ensures forall x:Ref :: x in xs ==> ((i >= 0) ==> acc(x.f)) && ((i < 0) ==> acc(x.g))
+ensures i >= 0 ==> r.f == 1
+ensures i < 0 ==> r.g == 4
+{
+    if (i >= 0) {
+        r.f := 1;
+        //:: ExpectedOutput(assignment.failed:insufficient.permission)
+        r.g := 2;
+    } else {
+        //:: ExpectedOutput(assignment.failed:insufficient.permission)
+        r.f := 3;
+        r.g := 4;
+    }
+
+}
