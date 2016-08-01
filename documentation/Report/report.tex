@@ -15,16 +15,59 @@
 \maketitle
 
 \section{Introduction}
+
+Separation Logic in general....
+Implicit dynamic frames
+
+To reason about shared mutable data structures permissions logics sch as separation logic and implicit dynamic frames assosciate an access permission with each memory location in order to reason about a shared mutable state.
+
+In order to deal with dynamic heap data structures it is necessary to denote acces permissions to a statically unknown set of locations. One way to deal with such specifications in existing tools is to use expressed in tools using recursive predicates. On the other hand there are also access patterns which can not be recursively defined using the predicate structure. A typical example would be a random access pattern in an arrray, or doubly-linked list from ent to start.
+Another approach which is not depending on the access pattern is to use Iterated Separating Conjucntions, which is a quantifier denoting access to apossibly unbounded set of heap locations.
+...more about isc
+
+...implementations in other infrastructures
+...viper
+...current support
+
+This project is intended to extend Viper \cite{viper}, a verification infrastructure for permission-based reasoning. It includes several front-ends which translate given programs to Viper's intermediate language Silver. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
+
+There are currently three features of Silver handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structure and quantified field permissions \cite{isc} allows us to express pointwise specifications. 
+
+The support of quantified permissions is still limited. In Viper, the structure of a quantified permissions is defined as:
+\newline 
+\begin{equation}
+	\mathbf{forall} \; x:T :: c(x) ==>\mathbf{acc}( e(x).f, p(x) ) ,
+\end{equation}
+where {\it c(x)} is  a boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
+
+The goal of this project is to generalise this form and make the expression of quantified permissions as liberal as possible.
+This paper deals with the following extensions to the viper project:
+\begin{itemize}
+\item support for quantified predicate permissions.
+\item support of combinations of multiple quantified permissions
+\item mixing quantified permissions with pure quantifiers
+\item support for magic wands
+\item support for nested quantifiers
+\end{itemize}
+
+
+\subsection{Motivating Example}
+
+\subsection{Outline}
+
+...section . deals with .
+
 \section{Background}
-\subsection{The Viper Verification Infrastructure}
+%viper, silver, carbon, silicon
 \subsubsection{Quantified Field Permissions}
 \subsubsection{Predicates}
+\subsubsection{Magic Wands}
 \section{Quantified Predicates}
 \section{Quantified Wands}
 \section{Combinations of Quantifiers}
 \section{Nested Quantifiers}
 \section{Evaluation}
 \section{Conclusion}
-\bibliography{report}
 
+\bibliography{report}
 \end{document}
