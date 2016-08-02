@@ -13,45 +13,26 @@
 
 \begin{document}
 \maketitle
-
+\newpage
+\section{Abstract}
 \section{Introduction}
+%viper implementation?
+In order to verify heap-manipulating programs including shared mutable data structures, separation logic\cite{reynolds2002separation} and implicit frames\cite{smans2009implicit} assosciate an access permission with each memory location to reason about its state. 
+Dynamic data structures may depend on a potentially unbound set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be defined as a predicate, for example a randomn access pattern in an array.
 
-Separation Logic in general....
-Implicit dynamic frames
+The paper Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution\cite{isc} presents a solution to define permissions to a set of unbound locations regardless of the access pattern. It generalises heap chunks to hold an unbound number of locations simultaneously and encode a symbolic value per location, as well as a solution how to remove and add permissions these heap chunks.
 
-To reason about shared mutable data structures permissions logics sch as separation logic and implicit dynamic frames assosciate an access permission with each memory location in order to reason about a shared mutable state.
-
-In order to deal with dynamic heap data structures it is necessary to denote acces permissions to a statically unknown set of locations. One way to deal with such specifications in existing tools is to use expressed in tools using recursive predicates. On the other hand there are also access patterns which can not be recursively defined using the predicate structure. A typical example would be a random access pattern in an arrray, or doubly-linked list from ent to start.
-Another approach which is not depending on the access pattern is to use Iterated Separating Conjucntions, which is a quantifier denoting access to apossibly unbounded set of heap locations.
-...more about isc
-
-...implementations in other infrastructures
-...viper
-...current support
-
-This project is intended to extend Viper \cite{viper}, a verification infrastructure for permission-based reasoning. It includes several front-ends which translate given programs to Viper's intermediate language Silver. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
+This approach was implemented in the verification infrastructure viper \cite{viper}. It includes several front-ends which translate given programs to Viper's intermediate language Silver. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
 
 There are currently three features of Silver handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structure and quantified field permissions \cite{isc} allows us to express pointwise specifications. 
 
-The support of quantified permissions is still limited. In Viper, the structure of a quantified permissions is defined as:
-\newline 
+This project presents the generalisation of that approach. Currently, the approach mentioned supports quantified permissions of the following structure:
 \begin{equation}
 	\mathbf{forall} \; x:T :: c(x) ==>\mathbf{acc}( e(x).f, p(x) ) ,
 \end{equation}
-where {\it c(x)} is  a boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
+where {\it f} is a field of any type, {\it c(x)} is  a boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
 
-The goal of this project is to generalise this form and make the expression of quantified permissions as liberal as possible.
-This paper deals with the following extensions to the viper project:
-\begin{itemize}
-\item support for quantified predicate permissions.
-\item support of combinations of multiple quantified permissions
-\item mixing quantified permissions with pure quantifiers
-\item support for magic wands
-\item support for nested quantifiers
-\end{itemize}
-
-
-\subsection{Motivating Example}
+As a generalisation, we introduce an adpation of this solution to allow permissions to predicates\cite{predicates} and magic wands\cite{magicwand} instead of field permissions, as well as generalise the general form in order to allow nested quantifiers and combinations of pure and permission-based quantifiers.
 
 \subsection{Outline}
 
@@ -69,5 +50,7 @@ This paper deals with the following extensions to the viper project:
 \section{Evaluation}
 \section{Conclusion}
 
+\bibliographystyle{unsrt}
 \bibliography{report}
+
 \end{document}
