@@ -10,6 +10,7 @@
 \date{\today}
 
 \documentclass[12pt]{article}
+\usepackage{mathtools}
 
 \begin{document}
 \maketitle
@@ -46,6 +47,53 @@ As a generalisation, we introduce an adpation of this solution to allow permissi
 \section{Quantified Predicates}
 \section{Quantified Wands}
 \section{Combinations of Quantifiers}
+In order to avoid declaring unnecessary forall expression with the condition or dependency, it is desirable to be able to express combinations of pure and permission-based specifications. We considered the following combinations:
+\begin{itemize}
+\item conjunction of any mix of pure and permission-based quantifiers:
+%TODO link to specific definition
+\begin{equation}
+	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))),
+\end{equation}
+where {\it trs} are the triggers of the forall expression, {\it c(x)} is  a boolean expression,{\it e(x)} denotes an expression which could either be a pure expression or a permission expression depending on x, in which case {\it e(x)} consists of an injective mapping to a set of locations and some permission function {\it p(x)} as described in the chapters before.
+
+\item implication of a boolean expression and a permission-based quantifier:
+%TODO: link?
+\begin{equation}
+	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
+\end{equation}
+with the same definitions of .
+\end{itemize}
+
+Please note that forall expressions which are entirely pure are not considered in this chapter.
+
+%TODO
+
+We considered two ways to expand the given approach to this setting: desugaring the forall expression to the form we defined before or adapt the interpretation to allow for such things. As it is, combinations may be depending on each other, which means each conjunction as to be evaluated sequentally. As a result there is barely any gain in not desugaring the terms mentioned before. Therefoe we suggest two rewriting rules to desugare conjunctions and implications within a forall expression.
+
+\subsection{Rewriting Rules}
+A conjunction of two expression is desugared by rewriting the entire forall expreeion into two forall expressions, dublicating variables, condition and triggers. Triggers are expected to be valid for both newly generated forall expressions.
+
+\begin{equation}
+\begin{aligned}
+	(\mathbf{forall} \; x:T :: \{trs\}\   c(x)  \Rightarrow e_1(x)) \ \&\& \\
+	(\mathbf{forall} \; x:T :: \{trs\}\   c(x) \Rightarrow  e_1(x))
+\end{aligned}
+\end{equation}
+
+An implication is rewritten to the logical equivalent of the conjunction of both conditions on the left-hand side of the implication.
+\begin{equation}
+	\mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x))
+\end{equation}
+
+\subsection{Implementation}
+The rewriting rules are implemented in the parser. As a result they are exectued for both Carbon and Silicon.
+
+User-given triggers are handed over. Since suitability of the triggers is not tested for each rewritten forall expression, triggers need to suite all and clauses of an expression. Pure quantifiers are not rewritten. 
+
+%TODO
+ In Carbon, triggers are generated after the rewriting step in case of empty triggers.
+
+
 \section{Nested Quantifiers}
 \section{Evaluation}
 \section{Conclusion}
