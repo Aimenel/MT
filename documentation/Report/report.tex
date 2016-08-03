@@ -21,7 +21,7 @@
 In order to verify heap-manipulating programs including shared mutable data structures, separation logic\cite{reynolds2002separation} and implicit frames\cite{smans2009implicit} assosciate an access permission with each memory location to reason about its state. 
 Dynamic data structures may depend on a potentially unbound set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be defined as a predicate, for example a randomn access pattern in an array.
 
-The paper Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution\cite{isc} presents a solution to define permissions to a set of unbound locations regardless of the access pattern. It generalises heap chunks to hold an unbound number of locations simultaneously and encode a symbolic value per location, as well as a solution how to remove and add permissions these heap chunks.
+The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} presents a solution to define permissions to a set of unbound locations regardless of the access pattern. It generalises heap chunks to hold an unbound number of locations simultaneously and encode a symbolic value per location, as well as a solution how to remove and add permissions these heap chunks.
 
 This approach was implemented in the verification infrastructure viper \cite{viper}. It includes several front-ends which translate given programs to Viper's intermediate language Silver. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
 
@@ -40,12 +40,108 @@ As a generalisation, we introduce an adpation of this solution to allow permissi
 ...section . deals with .
 
 \section{Background}
-%viper, silver, carbon, silicon
-\subsubsection{Quantified Field Permissions}
-\subsubsection{Predicates}
+
+In this section we explain
+
+\subsection{Viper}
+
+Viper\cite{viper} is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics.It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verifcation language. Currenlty, it includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers based on it and several front-ends for programming languages.
+
+\textit{Silver}
+
+The two back-end verifiers are called \textit{Carbon} and \textit{Silicon}.
+
+\textit{Carbon}  is based on verification condition generation.%continue
+
+\textit{Silicon} is based on symbolic execution.%continue
+
+
+\subsubsection{Silver}
+%overview of syntax
+fields, methods, functions, predicates, custom domains.
+
+\subsubsection{Permission-based reasoning in Viper}
+%Chunks
+
+\subsection{Unbounded heap structures}
+
+\subsubsection{Recursive Predicates}
+Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name, a list of formal parameters and a body. The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
+
+%TODO: example please. Explicit task thing for unfolding, folding a predicate
+\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
+inhale acc(pred(arg1, ..., argn)):\\
+assume permission at most p?\\
+generate snap\\
+add predicate chunk
+}}
+
+\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
+exhale acc(pred(arg1, ..., argn)):\\
+assert p not negative\\
+assert enough permission\\
+remove predicate chunk\\
+add predicate chunk with remaining permission if any
+}}
+
+\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
+unfold acc(pred(arg1, ..., argn):\\
+assert perm nonnegative\\
+consume predicate permission: generates snap\\
+produce predicate with obtained snap 
+}}
+
+
+\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
+fold pred(arg1, ..., argn):\\
+assume permission at most p\\
+consume body: obtain snap of chunk\\
+produce predicate chunk\\
+}}
+
+
+
 \subsubsection{Magic Wands}
-\section{Quantified Predicates}
-\section{Quantified Wands}
+The magic wand\cite{magicwand} A --* B is a binary connective, which allows that given assertion A is satisfied in the current state, it can be exchanged for the assertion B. Similarly to recursive predicates, the exchange can be initiated by \textit{apply}, whereas \textit{unapply} exchanges assertion B for assertion A. Viper also supports a heuristic to automate when these assertions are exchanged. This functionality can be used to keep track of partial data structures during a traversal.
+
+%example please. Explain more closely how apply and unapply work. Cite other stuff?
+
+%Quantified Field Permissions
+\subsubsection{Quantified Field Permissions}
+The generalisation of quantified permissions as defined before is building on top of the concept presented for quantified field permissions of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}.
+
+It defines a new definition for quantified heap chunks and an approach to inhale and exhale quantified field permissions.
+
+%Quantified Field Chunk
+\subsubsection{Quantified Field Chunk}
+
+
+%Inhale
+\subsubsection{Inhale}
+Inhaling a quantified field permissions consists of the following steps:
+\begin{itemize}
+\item evaluate the given terms (condition, receiver epxression, permission expression)
+\item introduce a new inverse function mapping a memory location to the initial value of the forall quantifier
+\item create a new field value map storing the values for the locations
+\item update the heap a new heap quantified field heap chunk 
+\end{itemize}
+
+%Exhale
+\subsubsection{Exhale}
+
+\begin{itemize}
+\item evaluate the given terms (condition, receiver epxression, permission expression)
+\item introduce a new inverse function mapping a memory location to the initial value of the forall quantifier
+\end{itemize}
+
+
+
+
+\section{Quantified Predicate Permissions}
+
+\section{Quantified Wand Permissions}
+
+%Quantifiers
 \section{Combinations of Quantifiers}
 In order to avoid declaring unnecessary forall expression with the condition or dependency, it is desirable to be able to express combinations of pure and permission-based specifications. We considered the following combinations:
 \begin{itemize}
