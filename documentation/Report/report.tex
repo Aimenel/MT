@@ -115,6 +115,14 @@ It defines a new definition for quantified heap chunks and an approach to inhale
 %Quantified Field Chunk
 \subsubsection{Quantified Field Chunk}
 
+%Quantified Fields
+\begin{tabular}{ l || c }
+& Quantified Field Permission \\ \hline
+General Form & \( \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \)  \\
+Inverse Functions &   \( \mathbf{forall} \   x:T :: c(x) \Rightarrow inv(e(x)) == x \) \\
+& \( \mathbf{forall} \   r:Ref :: c(inv(r)) \Rightarrow e(inv(r)) == r \) \\
+Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) \ \&\& c(x_2)  \Rightarrow e(x_1) != e(x_2) \)\\ \hline
+\end{tabular}
 
 %Inhale
 \subsubsection{Inhale}
@@ -135,9 +143,34 @@ Inhaling a quantified field permissions consists of the following steps:
 \end{itemize}
 
 
-
-
 \section{Quantified Predicate Permissions}
+
+For the support of quantified predicates, we can adapt the approach mentioned for Field Chunks. The main difference is, that predicates can have multiple arguments. As a concequence, the definitions for the inverse function, as well as the injectivity have to be changed. 
+
+%Quantified Predicate
+\begin{tabular}{ l || c }
+& Quantified Predicate Permission \\ \hline
+General Form & \( \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)) \)  \\
+Inverse Functions &   \( \mathbf{forall} \   x:T :: c(x) \Rightarrow inv(e_1 (x),…,e_n (x))==x \) \\
+& \( \mathbf{forall} \  arg_1:T_1,…,arg_n:T_n ::  c(inv(arg_1, …,arg_n ))  \) \\
+& \(\Rightarrow e_i (inv(arg_1, ..., arg_n )) == arg_i \) \\
+Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) \ \&\& c(x_2)\)  \\
+&\( \Rightarrow e_1(x_1) != e_1(x_2) || ... || (e_n(x_1) != e_n(x_2) \)\\ \hline
+\end{tabular}
+
+\subsection{Adding and removing permissions}
+
+\subsection{Inverse Functions}
+
+\subsection{Injectivity}
+
+\subsection{Quantified Predicate Chunk}
+
+
+
+
+
+
 
 \section{Quantified Wand Permissions}
 
