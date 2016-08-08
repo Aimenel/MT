@@ -40,54 +40,26 @@ As a generalisation, we introduce an adpation of this solution to allow permissi
 ...section . deals with .
 
 \section{Background}
+%Permissions in general
+In this chaper we give an overview of the theory needed to understand the proposed generalisation of quantified permissions, which is intended as an extenstion to the support already integrated in Viper\cite{viper}.
 
-In this section we explain
+Viper is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics. It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verifcation language. Currenlty, it includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers based on it and several front-ends for programming languages.
 
-"Dedicated assertions denote the permission to a heap location e.f, written as e.f -> in separation logic and as the accessibility predicate acc(e.f) in implicit dynamic frames; we use the latter in this paper."
+Permission logics were designed to define which locations of a heap are accessible. Viper works with fractional permissions between 0 and 1, where 1 denotes full permissions, which is equal to write and read permission, and any permission greater than 0 allowing to read values of a location. Both permissions and values of a location are stored in a heap chunk. When checking whether we posess enough permission for a specific location, we iterate through the heap chunks.
+Assertions may only depend on locations with permission. Reaoning abuot properties can be reduced to inhaling and exhaling assertions. Inhaling is equal to adding the permission denoted or an assume in case of a pure assertion. Exhaling translates to removing permission or asserting a property in case of a pure assertion. If the permission of a location is lost, we also lose information about its value.
 
-Permission logics are designed to define which locations of a heap may or may not be accessed. 
+The two back-end verifiers are called \textit{Carbon} and \textit{Silicon}. 
 
-Viper works with fractional permissions, where full permission denotes write and read access, permission greater than zero read access and zero permission no permission to read or write on that heap location. Assertions may only be rely on locations where sufficient permission are held.
+\textit{Carbon}  is based on verification condition generation. It translates the given silver program to Boogie\cite{leino2008boogie}, which proves the generated code.%continue
 
-"As soon as permission to a heap location is no longer held, information about its value cannot be retained."
+\textit{Silicon} is based on symbolic execution. It is based on the SMT solver Z3\cite{de2008z3} and Smallfoot-style Symbolic Execution\cite{berdine2005smallfoot}, where the symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions holding properties obtained while evaluating or executing commands.
+%Smallfoot-style Symbolic Execution: In successor tools: VeriFast, jSTar and Viper: heap chunks also predicates...
 
-"Inhaling an assertion A adds the permissions denoted by A to the current states and assumes the pure assertion A"
-"Exhaling an assertion A checks that the state contains the permissions denoted by A and removes them."
+\subsection{Silver}
+overview of syntax
+%fields, methods, functions, predicates, custom domains.
 
-Smallfoot-style Symbolic Exectuion:
-symbolic state: heap chunks and path conditions
-permission amount between 0 and 1
-Checking permissions: iterating through the heap chunks
-
-In successor tools: VeriFast, jSTar and Viper: heap chunks also predicates...
-
-\subsection{Viper}
-
-Viper\cite{viper} is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics.It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verifcation language. Currenlty, it includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers based on it and several front-ends for programming languages.
-
-
-
-\textit{Silver}
-
-The two back-end verifiers are called \textit{Carbon} and \textit{Silicon}.
-
-\textit{Carbon}  is based on verification condition generation.%continue
-
-\textit{Silicon} is based on symbolic execution.%continue
-
-
-\subsubsection{Silver}
-%overview of syntax
-fields, methods, functions, predicates, custom domains.
-
-\subsubsection{Permission-based reasoning in Viper}
-%Chunks
-
-
-
-\subsection{Unbounded heap structures}
-
-\subsubsection{Recursive Predicates}
+\subsection{Recursive Predicates}
 Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name, a list of formal parameters and a body. The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
 
 %TODO: example please. Explicit task thing for unfolding, folding a predicate
@@ -123,27 +95,24 @@ produce predicate chunk\\
 
 
 
-\subsubsection{Magic Wands}
-The magic wand\cite{magicwand} A --* B is a binary connective, which allows that given assertion A is satisfied in the current state, it can be exchanged for the assertion B. Similarly to recursive predicates, the exchange can be initiated by \textit{apply}, whereas \textit{unapply} exchanges assertion B for assertion A. Viper also supports a heuristic to automate when these assertions are exchanged. This functionality can be used to keep track of partial data structures during a traversal.
+\subsection{Magic Wands}
+A magic wand\cite{magicwand} A --* B is a binary connective, which allows that given assertion A is satisfied in the current state, it can be exchanged for the assertion B. Similarly to recursive predicates, the exchange can be initiated by \textit{apply}, whereas \textit{unapply} exchanges assertion B for assertion A. Viper also supports a heuristic to automate when these assertions are exchanged. This functionality can be used to keep track of partial data structures during a traversal.
 
 %example please. Explain more closely how apply and unapply work. Cite other stuff?
 
 %Quantified Field Permissions
-\subsubsection{Quantified Field Permissions}
-Injectivity due to separation logic: separating conjunction * expresses that permission denoted by the two conjuncts must be disjoint.
-
+\subsection{Quantified Field Permissions}
 The generalisation of quantified permissions as defined before is building on top of the concept presented for quantified field permissions of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}.
-
 It defines a new definition for quantified heap chunks and an approach to inhale and exhale quantified field permissions.
 
 %Quantified Field Chunk
-\subsubsection{Quantified Field Chunk}
+\paragraph{Quantified Field Chunk}
 Heap chunks are generalised to denote permission to an unbounded number of locations simultaneously.
 In order to avoid an existential query in making a quantified permission chunk depending on the variable of the original forall expression, an inverse function is introduced, which maps a location to the initial value of the variable. To guarantee the existence of an inverse function, it is necessary that the expression denoting the receiver must be injective, which does however not restrict the data structures that can be handled by this approach as long as correctly specified.This allows us to define a quantified permission chunk of the form r.f -> [v(r), p(r)], where r represents the quantified receiver, p(r) an expression denoting the permission amount and v(r) a value map used to hold the values of the locations.
 General form: r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)]
 
 %Inhale
-\subsubsection{Inhale}
+\paragraph{Inhale}
 Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
 Inhaling generates a new quantified heap chunks  r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)] after evaluating the condition, receiver expression and permission expression, as well as introducing the inverse function inv and a fresh value map v(r).
 The inverse function is only defined if the given condition c(x) or c(inv(r)) holds.The definition adds two quantified conditions to the path condition starting from a general location and the original variable types variable.
@@ -151,15 +120,9 @@ The inverse function is only defined if the given condition c(x) or c(inv(r)) ho
 %injectivity
 
 %Exhale
-\subsubsection{Exhale}
+\paragraph{Exhale}
 Exhaling again evaluates the condition, receiver expression and permission expression, checks the injectivity of the receiver expression, introduces its inverse function and proceeds to remove the permission from the heap.
 The removing is done by walking through all quantified field chunks with the same field f, removing permissions greedily or fails if there is not enough permission. Updating chunks is expressed via pointwise-defined functions defining the permission amounts.
-
-\begin{itemize}
-\item evaluate the given terms (condition, receiver epxression, permission expression)
-\item introduce a new inverse function mapping a memory location to the initial value of the forall quantifier
-\end{itemize}
-
 
 %Quantified Fields inverse function and injectivity definitions.
 \begin{tabular}{ l || c }
@@ -189,12 +152,7 @@ Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) 
 
 
 \subsection{Quantified Predicate Chunk}
-
-\subsection{Inverse Functions}
-
-\subsection{Injectivity}
-
-
+A new type of Quantified Chunk must be defined. It combines a predicate Chunk with the Quantified Field Chunk, where the field value function is replaced with a predicate snap funciton, which allows us to keep track of changed values during an unfold. The general form of such a heap chunk looks like: p(arg1, ..., argn) -> [snap(arg1, ...,argn), c(inv(arg1, ..., argn)) ? p(inv(arg1, ...., argn)) : 0)]
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
