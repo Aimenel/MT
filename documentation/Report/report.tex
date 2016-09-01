@@ -11,9 +11,12 @@
 
 \documentclass[12pt]{article}
 \usepackage{mathtools}
+\usepackage{listings}
 
 \begin{document}
 \maketitle
+\newpage
+\tableofcontents
 \newpage
 \section{Abstract}
 \section{Introduction}
@@ -139,6 +142,35 @@ Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) 
 \section{Quantified Predicate Permissions}
 For the support of quantified predicates, we can adapt the approach mentioned for Field Chunks. The main difference is, that predicates can have multiple arguments. As a concequence, the definitions for the inverse function, as well as the injectivity have to be changed. 
 
+%General Form. Why that form
+
+
+\subsection{General Approach}
+%Mini-Introduction?
+
+%Technical Challenges of it
+We explain the technical challenges involved in answering the following questions:
+\begin{enumerate}
+\item How to model the program state, including permissions and values?
+\item How to check for a permission in a state?
+\item How to add and remove permissions to and from a state?
+\item How to evaluate (heap-dependent) expressions in a state?
+\item When to preserve (frame) an expression's value across heap changes?
+\end{enumerate}
+%Example
+
+\subsubsection{Adaption to state}
+In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. 
+
+Our design combines the solution presented for quantified field chunks and predicate chunks. Contrary to a quantified field chunk, a general representation of a predicate is depending on its arguements instead of a generalized location reference, whereas the predicate name takes the place of the field name. As a consequence the generalisation of a predicate chunk is defined per predicate name, whereas the permission and values are depending on its arguments.
+
+Anagolous to the quantified chunk representation mentioned before it is necessary to define a inverse function  in order to express the condition and permission amount for the predicate with general arguemtns. This inverse function returns the value of the quantifier variable of the original variable. As a result we have to restrict the allowed expression terms in the form of predicates. The comibnation of the expressions has to be injective.
+
+%value funciton replaced
+
+%general form
+%where does the snapshot come from
+
 %Quantified Predicate
 \begin{tabular}{ l || c }
 & Quantified Predicate Permission \\ \hline
@@ -147,16 +179,74 @@ Inverse Functions &   \( \mathbf{forall} \   x:T :: c(x) \Rightarrow inv(e_1 (x)
 & \( \mathbf{forall} \  arg_1:T_1,…,arg_n:T_n ::  c(inv(arg_1, …,arg_n ))  \) \\
 & \(\Rightarrow e_i (inv(arg_1, ..., arg_n )) == arg_i \) \\
 Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) \ \&\& c(x_2)\)  \\
-&\( \Rightarrow e_1(x_1) != e_1(x_2) || ... || (e_n(x_1) != e_n(x_2) \)\\ \hline
+&\( \Rightarrow e_1(x_1) != e_1(x_2) || ... || (e_n(x_1) != e_n(x_2) \)\\ 
+Heap Chunk &  \( \mathbf{pred}(arg_1, ...., arg_n)\mapsto [s(arg_1, ...., arg_n),\) \\
+&  \(c(inv(arg_1, ..., arg_n)) ? p(inv(arg_1, ..., arg_n))]\)\\ \hline
 \end{tabular}
 
+\subsection{checking permission}
+Exhaling a quantified predicate permission
 
-\subsection{Quantified Predicate Chunk}
-A new type of Quantified Chunk must be defined. It combines a predicate Chunk with the Quantified Field Chunk, where the field value function is replaced with a predicate snap funciton, which allows us to keep track of changed values during an unfold. The general form of such a heap chunk looks like: p(arg1, ..., argn) -> [snap(arg1, ...,argn), c(inv(arg1, ..., argn)) ? p(inv(arg1, ...., argn)) : 0)]
+\subsection{Adding and removing permission}
+Adding and removing permisisons are done by inhaling and exhaling respecitvely.
+
+\subsubsection{Inhaling}
+Inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition.
+As for the quantified field expression, the condition, argument expressions and permission expression are evaluated as a frist step, which may update the path condition. 
+
+The inverse function is intorduced anagolous to a quantified field permission and further defined by adding two constraints to the path condition. Whereas a quantified field permission is depending on the variable of the given inhale expression and a fix reference as a general location, a quantified predicate permission may depend on multiple variables. As a consequence the cardinality of the inverse function may vary with differend predicates, whereas the definition and constraints are identical for the same predicates.
+
+Instead of a value function, we introduce a function, which maps a concrete instantiation of a predicate defined by its arguements to the snap of the specific predicate. This snap value contains the values on which the predicate may rely on during an unfold or unfolding. On introduction, it models an unknown snapshot in the domain. %domain? what is it? 
+
+\begin{lstlisting}
+inhale(h_0, π_o, forall x:T :: c(x) => acc(c(x).f, p(x))) 
+
+var (
+\end{lstlisting}
+
+
+\subsubsection{Exhaling}
+After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity analogously to a quantified field permission before introducing the inverse functions as defined in the inhaling. For the injectivity check, it is sufficient that at least one argument expression differs on the evaluation of any two unequal variables satisfying the condition presented in the original statement. %Example
+
+Removing the permission amount is done the same way as in the approach for quantified field permissions by iterating through all chunks, taking permission greedily, and raising an error if not enough permission is available.
+
+\subsection{Treatment of Symbolic Values}
+The predicate snapshot is used during unfold, fold and unfolding, where unfold corresponds to a field read and fold to field write in the context of a quantified field permission.
+
+%overview
+
+\subsubsection{Unfold}
+Unfold exhales the permission to the predicate with given arguments as described above. Exhaling will provide you with the snapshot of the predicate, which is inhaled - containing permission and values designated by the snapshot.
+
+\subsubsection{Fold}
+Exhales the body of the predicate and stores its snapshot in the  snapshot function of the newly generated quantified predicate chunk.
+
+\subsection{Unfolding}
+Unfolding is desugared as before.
+
+\subsection{Framing}
+
+%silicon
+\subsection{Silicon}
+The implementation of Siilicon is very close to the approach presented in section 2.
+Analogous to the quantified field permissions unquantified predicates are also treated as quantified permissions, where the permission is restricted to the specific predicate argument values.
+
+\subsubsection{Producing multiple Quantified Predicates}
+\begin{itemize}
+\item create new quantified predicate heap chunk
+\item declare inverse functions and two assumtpions declaring its properties as defined above.
+\end{itemize}
+
+Z3 Code-wise: The assumption of non-null fields is not necessary.
+
+\subsubsection{Producing a single Quantified Predicate}
+
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
 A representation of a Magic Wand\cite{magicwand} depends on the form of de wand definition and may have multiple arguments. As a consequence, the definition for inverse funcitons and injectivity are analogous to a quantified predicate permission.
+
+%example
 
 %Quantifiers
 \section{Combinations of Quantifiers}
