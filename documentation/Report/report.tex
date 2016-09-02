@@ -199,12 +199,21 @@ The inverse function is intorduced anagolous to a quantified field permission an
 
 Instead of a value function, we introduce a function, which maps a concrete instantiation of a predicate defined by its arguements to the snap of the specific predicate. This snap value contains the values on which the predicate may rely on during an unfold or unfolding. On introduction, it models an unknown snapshot in the domain. %domain? what is it? 
 
-%Inhaling Field
-\fbox{
-\begin{minipage}{3in}
+
+\begin{tabular}{ l}
+\textbf{Inhaling a Quantified Field Permission:}\\  \hline
+inhale( \(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) \{\\
+\t test  \\
+\}\\
+\end{tabular}
+
+
+\noindent
+\begin{minipage}[t]{.8\textwidth}
+\raggedright
 \begin{flalign*}
-\mathbf{Inhaling a Quantified Field Permission:}\\
-inhale(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \{ \\
+\mathbf{Inhaling a Quantified Field Permission:} && \\
+inhale(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \{ && \\
 \textrm{Let y be a fresh symbolic constant of Type T}\\
 \textrm{\textit{/* Symbolically evaluate source-level expressions */}}\\
 \mathbf{var} (\pi_1, \underline{c}(y)) := eval(h_0, π_0, c_y))\\
@@ -223,8 +232,27 @@ inhale(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \{
 \}\\
 \end{flalign*} 
 \end{minipage}
-}
-
+%Inhaling Field
+\begin{flalign*}
+\mathbf{Inhaling a Quantified Field Permission:} && \\
+inhale(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \{ && \\
+\textrm{Let y be a fresh symbolic constant of Type T}\\
+\textrm{\textit{/* Symbolically evaluate source-level expressions */}}\\
+\mathbf{var} (\pi_1, \underline{c}(y)) := eval(h_0, π_0, c_y))\\
+\mathbf{var} (\pi_2,\underline{e}(y)) := eval(h_0, π_0, e_y))\\
+\mathbf{var} (\pi_3,\underline{p}(y)) := eval(h_0, π_0, p_y))\\
+\mathbf{var} \pi_4 := \pi_3{\c(y)}\\
+\\
+\textrm{\textit{/*Introduce inverse function */}}\\
+\textrm{Let } e^{-1} \textrm{  be a fresh function of type } T \rightarrow Ref\\
+\mathbf{var} \pi_5 :=  \pi_4 \cup \{\forall r: Ref \cdot c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \} \\
+\mathbf{var} \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot c(e(x))  \Rightarrow e^{-1}(\underline{e}(r)) = x \} \\
+\\
+\textrm{Let } v \textrm{  be a fresh value map}\\
+\mathbf{var} h_1 :=  h_0 \cup \{r.f \mapsto [v(r), \underline{c}(e^{-1}(r)) ? \underline{p}(e^{-1}(r)) : 0] \} \\
+\mathbf{return} (h_1, \pi_6)\\
+\}\\
+\end{flalign*} 
 
 %Exhaling Field
 \fbox{
