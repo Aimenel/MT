@@ -138,73 +138,11 @@ Inverse Functions &   \( \mathbf{forall} \   x:T :: c(x) \Rightarrow inv(e(x)) =
 Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) \ \&\& c(x_2)  \Rightarrow e(x_1) != e(x_2) \)\\ \hline
 \end{tabular}
 
-%formulas defining inhale, exhale, remove
-
-
-\section{Quantified Predicate Permissions}
-For the support of quantified predicates, we can adapt the approach mentioned for Field Chunks. The main difference is, that predicates can have multiple arguments. As a concequence, the definitions for the inverse function, as well as the injectivity have to be changed. 
-
-%General Form. Why that form
-
-
-\subsection{General Approach}
-%Mini-Introduction?
-
-%Technical Challenges of it
-We explain the technical challenges involved in answering the following questions:
-\begin{enumerate}
-\item How to model the program state, including permissions and values?
-\item How to check for a permission in a state?
-\item How to add and remove permissions to and from a state?
-\item How to evaluate (heap-dependent) expressions in a state?
-\item When to preserve (frame) an expression's value across heap changes?
-\end{enumerate}
-%Example
-
-\subsubsection{Adaption to state}
-In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. 
-
-Our design combines the solution presented for quantified field chunks and predicate chunks. Contrary to a quantified field chunk, a general representation of a predicate is depending on its arguements instead of a generalized location reference, whereas the predicate name takes the place of the field name. As a consequence the generalisation of a predicate chunk is defined per predicate name, whereas the permission and values are depending on its arguments.
-
-Anagolous to the quantified chunk representation mentioned before it is necessary to define a inverse function  in order to express the condition and permission amount for the predicate with general arguemtns. This inverse function returns the value of the quantifier variable of the original variable. As a result we have to restrict the allowed expression terms in the form of predicates. The comibnation of the expressions has to be injective.
-
-%value funciton replaced
-
-%general form
-%where does the snapshot come from
-
-%Quantified Predicate
-\begin{tabular}{ l || c }
-& Quantified Predicate Permission \\ \hline
-General Form & \( \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)) \)  \\
-Inverse Functions &   \( \mathbf{forall} \   x:T :: c(x) \Rightarrow inv(e_1 (x),…,e_n (x))==x \) \\
-& \( \mathbf{forall} \  arg_1:T_1,…,arg_n:T_n ::  c(inv(arg_1, …,arg_n ))  \) \\
-& \(\Rightarrow e_i (inv(arg_1, ..., arg_n )) == arg_i \) \\
-Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) \ \&\& c(x_2)\)  \\
-&\( \Rightarrow e_1(x_1) != e_1(x_2) || ... || (e_n(x_1) != e_n(x_2) \)\\ 
-Heap Chunk &  \( \mathbf{pred}(arg_1, ...., arg_n)\mapsto [s(arg_1, ...., arg_n),\) \\
-&  \(c(inv(arg_1, ..., arg_n)) ? p(inv(arg_1, ..., arg_n))]\)\\ \hline
-\end{tabular}
-
-\subsection{checking permission}
-Exhaling a quantified predicate permission
-
-\subsection{Adding and removing permission}
-Adding and removing permisisons are done by inhaling and exhaling respecitvely.
-
-\subsubsection{Inhaling}
-Inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition.
-As for the quantified field expression, the condition, argument expressions and permission expression are evaluated as a frist step, which may update the path condition. 
-
-The inverse function is intorduced anagolous to a quantified field permission and further defined by adding two constraints to the path condition. Whereas a quantified field permission is depending on the variable of the given inhale expression and a fix reference as a general location, a quantified predicate permission may depend on multiple variables. As a consequence the cardinality of the inverse function may vary with differend predicates, whereas the definition and constraints are identical for the same predicates.
-
-Instead of a value function, we introduce a function, which maps a concrete instantiation of a predicate defined by its arguements to the snap of the specific predicate. This snap value contains the values on which the predicate may rely on during an unfold or unfolding. On introduction, it models an unknown snapshot in the domain. %domain? what is it? 
-
-
-\newcommand*{\ident}{\hspace*{0.5cm}}%
-\begin{figure}[hb]
+%inhale
+\newcommand*{\ident}{\hspace*{0.5cm}}
+\begin{figure}[h]
   \centering
-\begin{tabularx}{.9\textwidth}{| X |}
+\begin{tabularx}{1\textwidth}{| X |}
 \hline
 \textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) \{\\
 \ident Let y be a fresh symbolic constant of type\( \ T\) \\
@@ -228,36 +166,174 @@ Instead of a value function, we introduce a function, which maps a concrete inst
    {Symbolic execution rules for inhaling a quantified field permission. Eval. Check...}
 \end{figure}
 
-
-%Exhaling Field
-\fbox{
-\begin{minipage}{3in}
-\begin{flalign*}
-\mathbf{Exhaling a Quantified Field Permission:}\\
-exhale(h_0, \pi_0,  \mathbf{forall} x:T :: c(x) \Rightarrow acc(e(x).f, p(x)) \{ \\
-\textrm{Let y be a fresh symbolic constant of Type T}\\
-\textrm{\textit{/* Symbolically evaluate source-level expressions (as above)*/}}\\
-[\dots]\\
-\textrm{\textit{/*Check injectivity of receiver expression*/}}\\
-\textrm{Let } y_1, y_2 \textrm{ be a fresh symbolic constants of Type T}\\
-\mathbf{check} \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\\
+%exhale
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) \{\\
+\ident Let y be a fresh symbolic constant of type\( \ T\) \\
 \\
-\textrm{\textit{/*Introduce inverse function (as above*/}}\\
-[\dots]\\
-\textrm{\textit{/*Remove Permissions*/}}\\
-\mathbf{var} h_1 :=  remove(h_0, \pi_6, f, (\lambda r \cdot \underline{c}(e^{-1}(r)) ? \underline{p}(e^{-1}(r)) : 0)) \\
-\mathbf{return} (h_1, \pi_6)\\    
-\}\\
-\end{flalign*} 
-\end{minipage}
-}
+\ident \textit{/* Check injectivity of receiver expression */} \\
+\ident Let \(\ y_1, y_2\ \) be a fresh symbolic constants of Type \(\ T\) \\
+\ident \(\mathbf{check} \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\) \\
+\\
+\ident \textit{/* Introduce inverse function (as above)*/}\\
+\ident [\dots] \\
+\\
+\ident \textit{/* Remove Permissions */}\\
+\ident \( \mathbf{var} h_1 :=  remove(h_0, \pi_6, f, (\lambda r \cdot \underline{c}(e^{-1}(r)) ? \underline{p}(e^{-1}(r)) : 0))  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Exhaling a Quantified Field Permission]
+   {Symbolic execution rules for exhaling a quantified field permission. Eval. Check...}
+\end{figure}
+
+%remove
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{remove}\(\ (h_0, \pi_0, f, g) \) \{\\
+\ident Let \(h_f \subseteq h_0\) be all chunks in given state for field \(f\) \\
+\ident \textit{/* Processed chunks */} \\
+\ident \( \mathbf{var \ } h'_f := \emptyset \) \\
+\ident \textit{/* Permission still to taken */} \\
+\ident \( \mathbf{var \ } q_{needed} :=  q \)   \\
+\ident \textbf{foreach} \(r.f  \mapsto [v_i(r), q_i(r)] \in h_f\) \textbf{do:} \\
+\ident \ident \textit{/* Determine the permissions to take from this chunk */} \\
+\ident \ident \( \mathbf{var \ } q_{current} := ( \lambda r \cdot min(q_i(r), q_{needed}(r))) \)\\
+\\ 
+\ident \ident \textit{/* Decrease the permissions still needed */} \\
+\ident \ident \(q_{needed} := (\lambda r\cdot q_{needed}(r) - q_{current}(r)) \)\\
+\\
+\ident \ident \textit{/* Add an updated chunk to the processed chunks */} \\
+\ident \ident \( h'_f := h'_f \cup \{r.f \mapsto [v_i(r), (q_i(r) - q_{current}(r))] \} \)\\
+\\
+\ident \textit{/* Check that sufficient permissions were removed */} \\
+\ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(r) = 0 \) \\
+\ident \textbf{return} \( (h_1 \backslash h_f)  \cup h'_f \) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Remove a Quantified Field Permission]
+   {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
+\end{figure}
+
+%summarize
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{summarize}\(\ (h_0, f) \) \{\\
+\ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for field \(f\) \\
+\ident Let \(v\) be a fresh value map\\
+\ident \textit{/* Value summary path conditions */} \\
+\ident \textbf{var } \(def := \emptyset \) \\
+\ident \textit{/* Permission summary */} \\
+\ident \textbf{var } \(perm := \lambda r \cdot 0\) \\
+\ident \textbf{foreach } \((r.f \mapsto [v_i(r), q_i(r)]) \in h_f \) \textbf{do:} \\
+\ident \ident \(def := def \cup \{ \forall r \cdot 0 < q_i(r)  \Rightarrow v(r) = v_i(r) \} \) \\
+\ident \ident \(perm := \lambda r \cdots (perm(r) + q_i(r)) \) \\
+\ident \textbf{return} \((v, def, perm)\) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Summarize Quantified Field Permissions]
+   {Symbolic execution rules for summarizing quantified field permissions. Eval. Check...}
+\end{figure}
+
+
+\section{Quantified Predicate Permissions}
+In this section we present an adpation of the mentioned solution of quantified field permissions support to allow the support of quantified predicate permissions. 
+As the general form we consider the adaption of the canonical form presented for quantified predicate permissions: 
+\begin{equation}
+ \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)), 
+\end{equation}
+where \(c(x)\) is a boolean expression,\( e_i(x)\) denotes an expression expression of the predicate \textit{pred} ith's arguments and \(p(x)\) permission expression.
+
+Introducing this new form allows us to express permission to more complex structures such as a set of lists.
+
+\subsection{General Approach}
+%Technical Challenges of it
+To explain the adaption needed for the implementation, we again discuss the aswers to the following questions:
+\begin{enumerate}
+\item How to model the program state, including permissions and values?
+\item How to check for a permission in a state?
+\item How to add and remove permissions to and from a state?
+\item How to evaluate (heap-dependent) expressions in a state?
+\item When to preserve (frame) an expression's value across heap changes?
+\end{enumerate}
+%Example
+
+The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp} and the fourth in section \ref{qppVals}. 
+
+\subsubsection{Symbolic Heap Representation} \label{shr}
+In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. In the previous design, the quantified field heap chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
+For quantified predicate chunk we use the predicate instead of the field as identification, where we use a set of general arguments to express permission and values. The general form of such a heap chunk conforms to:
+\begin{equation}
+	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [s(\mathrm{arg_1, ..., arg_n}), p(inv(\mathrm{arg_1, ..., arg_n}))]
+\end{equation}
+where the values of the value map conform to the snapshot of a predicate instantiation.
+
+In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier given the arguements of the predicate. The adaptend inverse function is defined as:\\
+
+\begin{tabularx}{1\textwidth}{ X}
+\textbf{function }\(inv(a_1:A_1, \dots, a_n:A_n): T\) \\
+\( \mathbf{forall \ }  x:T :: c(x) \Rightarrow inv(e_1 (x),…,e_n (x))==x \) \\
+\( \mathbf{forall \ }  a_1:A_1,\dots, a_n:A_n ::  c(inv(a_1, …,a_n )) \Rightarrow e_i (inv(a_1,\dots, a_n )) = a_i \) \\
+\end{tabularx}\\
+
+Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result. The comibnation of the expressions has to be injective.
+
+\subsection{Treatement of Permissions} \label{qpp}
+With the new quantified predicate heap chunks defined above, we redefine \(inhale\) and \(exhale\) operations for quantified predicate permissions.
+
+\subsubsection{Inhaling}
+As before, inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition.
+Similarly the quantified field expression, the condition, argument expressions and permission expression are evaluated as a frist step.
+
+The inverse function is intorduced anagolous to a quantified field permission and further defined by adding two constraints to the path condition. As mentioned before, the cardinality of the inverse function may vary with different predicates, whereas the definition and constraints are identical for the same predicate.
+
+Instead of a value function, we introduce a function, which maps a concrete instantiation of a predicate defined by its arguements to the snap of the specific predicate. This snap value contains the values on which the predicate may rely on during an unfold or unfolding. On introduction, it models an unknown snapshot in the domain. %domain? what is it? 
+
+%inhale
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
+\ident Let y be a fresh symbolic constant of type\( \ T\) \\
+\ident \textit{/* Symbolically evaluate source-level expressions */} \\
+\ident \( \mathbf{var\ } (\pi_1, \underline{c}(y)) := eval(h_0, \pi_0, c_y)) \)\\
+\ident \( \mathbf{var\ } (\pi_{2_1},\underline{e_1}(y)) := eval(h_0, \pi_1 \cup \{ \) \underline{c}\( (y)\}, e_{1_y})) \)\\
+\ident [\dots] \\
+\ident \( \mathbf{var\ } (\pi_{2_n},\underline{e_1}(y)) := eval(h_0, \pi_0, e_{n_y})) \)\\
+
+\ident \( \mathbf{var\ } (\pi_3,\underline{p}(y)) := eval(h_0, \pi_{2_n}, p_y))) \)\\
+\ident \( \mathbf{var\ } \pi_4 := \pi_3 \backslash \{\underline{c}(y)\} \)\\
+\\
+\ident \textit{/* Introduce inverse function */}\\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\\
+\ident Let  \(v\)  be a fresh value map \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
+\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Inhaling a Quantified Field Permission]
+   {Symbolic execution rules for inhaling a quantified predicate permission.}
+\end{figure}
 
 \subsubsection{Exhaling}
 After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity analogously to a quantified field permission before introducing the inverse functions as defined in the inhaling. For the injectivity check, it is sufficient that at least one argument expression differs on the evaluation of any two unequal variables satisfying the condition presented in the original statement. %Example
 
 Removing the permission amount is done the same way as in the approach for quantified field permissions by iterating through all chunks, taking permission greedily, and raising an error if not enough permission is available.
 
-\subsection{Treatment of Symbolic Values}
+\subsection{Treatment of Symbolic Values} \label{qppVals}
 The predicate snapshot is used during unfold, fold and unfolding, where unfold corresponds to a field read and fold to field write in the context of a quantified field permission.
 
 %overview
