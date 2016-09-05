@@ -283,20 +283,22 @@ In order to translate the given permission to that form, we need to adapt the de
 \( \mathbf{forall \ }  a_1:A_1,\dots, a_n:A_n ::  c(inv(a_1, …,a_n )) \Rightarrow e_i (inv(a_1,\dots, a_n )) = a_i \) \\
 \end{tabularx}\\
 
-Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result. The comibnation of the expressions has to be injective.
+Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result. The combination of the expressions has to be injective.
 
 \subsection{Treatement of Permissions} \label{qpp}
 With the new quantified predicate heap chunks defined above, we redefine \(inhale\) and \(exhale\) operations for quantified predicate permissions.
 
 \subsubsection{Inhaling}
+The adapted symbolic execution rules for a inhaling a quantified permission can be seen in figure \ref{qpInhale}. It differs in the definition of the inverse funciton, as well as the values of the value map.
+
 As before, inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition.
 Similarly the quantified field expression, the condition, argument expressions and permission expression are evaluated as a frist step.
 
 The inverse function is intorduced anagolous to a quantified field permission and further defined by adding two constraints to the path condition. As mentioned before, the cardinality of the inverse function may vary with different predicates, whereas the definition and constraints are identical for the same predicate.
 
-Instead of a value function, we introduce a function, which maps a concrete instantiation of a predicate defined by its arguements to the snap of the specific predicate. This snap value contains the values on which the predicate may rely on during an unfold or unfolding. On introduction, it models an unknown snapshot in the domain. %domain? what is it? 
+We introduce a value map, which maps a concrete instantiation of a predicate defined by its arguements to the snap of that predicate. This snap value is used to retrieve information during an unfold or unfolding. On introduction, all snapshots are unknown.
+%domain?
 
-%inhale
 \begin{figure}[h]
   \centering
 \begin{tabularx}{1\textwidth}{| X |}
@@ -326,26 +328,88 @@ Instead of a value function, we introduce a function, which maps a concrete inst
 \end{tabularx}
 \caption[Inhaling a Quantified Field Permission]
    {Symbolic execution rules for inhaling a quantified predicate permission.}
+\label{qpInhale}
 \end{figure}
 
 \subsubsection{Exhaling}
-After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity analogously to a quantified field permission before introducing the inverse functions as defined in the inhaling. For the injectivity check, it is sufficient that at least one argument expression differs on the evaluation of any two unequal variables satisfying the condition presented in the original statement. %Example
+In order to exhale a quantified predicate permission, we need to adapt the injectivity check, as well as the inverse function definition. The algorithm is defined in figure %\ref{qpExhale}.
 
-Removing the permission amount is done the same way as in the approach for quantified field permissions by iterating through all chunks, taking permission greedily, and raising an error if not enough permission is available.
+After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity analogously to a quantified field permission before introducing the inverse functions as defined in the inhaling. For the injectivity check, it is sufficient that at least one argument expression differs on the evaluation of any two unequal variables fo type T satisfying the condition. %Example
+
+%exhale
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0, \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x))\) \{\\
+\ident Let y be a fresh symbolic constant of type\( \ T\) \\
+\\
+\ident \textit{/* Check injectivity of receiver expression */} \\
+\ident Let \(\ y_1, y_2\ \) be a fresh symbolic constants of Type \(\ T\) \\
+\ident \(\mathbf{check \ } \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land (\underline{e_1}(y_1) = \underline{e_1}(y_2)) \land \dots \land  (\underline{e_n}(y_1) = \underline{e_n}(y_2)) \Rightarrow \) \\
+\ident \ident \ident \ident \(y_1 = y_2\) \\
+\\
+\ident \textit{/* Introduce inverse function (as above)*/}\\
+\ident [\dots] \\
+\\
+\ident \textit{/* Remove Permissions */}\\
+\ident \( \mathbf{var \ } h_1 :=  remove(h_0, \pi_6, f, \lambda a_1, \dots, a_n \cdot \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \)\\ 
+\ident \ident \ident  \( \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0))  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Exhaling a Quantified Field Permission]
+   {Symbolic execution rules for exhaling a quantified predicate permission.} %expand description: check, remove....
+\label{qpExhale}
+\end{figure}
+
+%remove
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{remove}\(\ (h_0, \pi_0, f, g) \) \{\\
+\ident Let \(h_{pred} \subseteq h_0\) be all chunks in given state for predicate \(pred\) \\
+\ident \textit{/* Processed chunks */} \\
+\ident \( \mathbf{var \ } h'_{pred} := \emptyset \) \\
+\ident \textit{/* Permission still to taken */} \\
+\ident \( \mathbf{var \ } q_{needed} :=  q \)   \\
+\ident \textbf{foreach} \(pred(a_1, \dots, a_n) \mapsto [v_i(a_1, \dots, a_n), q_i(a_1, \dots, a_n)] \in h_{pred}\) \textbf{do:} \\
+\ident \ident \textit{/* Determine the permissions to take from this chunk */} \\
+\ident \ident \( \mathbf{var \ } q_{current} := ( \lambda a_1, \dots, a_n \cdot min(q_i(a_1, \dots, a_n), q_{needed}(a_1, \dots, a_n))) \)\\
+\\ 
+\ident \ident \textit{/* Decrease the permissions still needed */} \\
+\ident \ident \(q_{needed} := (\lambda a_1, \dots, a_n \cdot q_{needed}(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n) \)\\
+\\
+\ident \ident \textit{/* Add an updated chunk to the processed chunks */} \\
+\ident \ident \( h'_{pred} := h'_{pred} \cup \{r.f \mapsto [v_i((a_1, \dots, a_n), (q_i(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n)] \} \)\\
+\\
+\ident \textit{/* Check that sufficient permissions were removed */} \\
+\ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(a_1, \dots, a_n) = 0 \) \\
+\ident \textbf{return} \( (h_1 \backslash h_{pred})  \cup h'_{pred} \) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Remove a Quantified Field Permission]
+   {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
+\label{qpRemove}
+\end{figure}
+
+The definition of removing a permission amount from a quantified epxression does not need to be changed except for the filtering of the quantified chunks. After that, we again iterate through these chunks, taking permission greedily, and raising an error if not enough permission is available. The updated definition can be seen in figure %\ref{qpRemove}.
 
 \subsection{Treatment of Symbolic Values} \label{qppVals}
 The predicate snapshot is used during unfold, fold and unfolding, where unfold corresponds to a field read and fold to field write in the context of a quantified field permission.
 
 %overview
-
-\subsubsection{Unfold}
+\subsubsection{Unfold} 
+\label{qUnfold}
 Unfold exhales the permission to the predicate with given arguments as described above. Exhaling will provide you with the snapshot of the predicate, which is inhaled - containing permission and values designated by the snapshot.
 
-\subsubsection{Fold}
+\subsubsection{Fold} 
+\label{qFold}
 Exhales the body of the predicate and stores its snapshot in the  snapshot function of the newly generated quantified predicate chunk.
 
 \subsection{Unfolding}
-Unfolding is desugared as before.
+Unfolding is desugared as before, by using the unfold definition of  \ref{qUnfold} on the predicate, evaluating the expression e and finally folding the predicate as described in \ref{qFold}.
 
 \subsection{Framing}
 
