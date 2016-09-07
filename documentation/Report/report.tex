@@ -13,6 +13,11 @@
 \usepackage{mathtools}
 \usepackage{algorithm}
 \usepackage{tabularx}
+\usepackage{listings}
+
+\lstset{
+         numbers=left,
+ }
 
 \begin{document}
 \maketitle
@@ -64,40 +69,54 @@ overview of syntax
 %fields, methods, functions, predicates, custom domains.
 
 \subsection{Recursive Predicates}
-Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name, a list of formal parameters and a body. The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
 
-%TODO: example please. Explicit task thing for unfolding, folding a predicate
-\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
-inhale acc(pred(arg1, ..., argn)):\\
-assume permission at most p?\\
-generate snap\\
-add predicate chunk
-}}
+Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name,  list of formal parameters and a body. 
+Since predicates can be recursive, for example in case of the example in figure \ref{rec}, and the predicate could potentially be unrolled endlessly, Silver introduces a predicate instance seperatly from its body.
+The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
 
-\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
-exhale acc(pred(arg1, ..., argn)):\\
-assert p not negative\\
-assert enough permission\\
-remove predicate chunk\\
-add predicate chunk with remaining permission if any
-}}
+%example recursive
+\begin{figure}[h]
+  \centering
+\begin{lstlisting}
+field val: Int
+field next:Ref
 
-\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
-unfold acc(pred(arg1, ..., argn):\\
-assert perm nonnegative\\
-consume predicate permission: generates snap\\
-produce predicate with obtained snap 
-}}
+predicate list(r:Ref)
+{
+    acc(r.val) && acc(r.next) && (r.next != null ==> list(r.next))
+}
+\end{lstlisting}
+\caption[recursive predicate]
+   {recursive predicate example}
+\label{rec}
+\end{figure}
 
 
-\framebox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{
-fold pred(arg1, ..., argn):\\
-assume permission at most p\\
-consume body: obtain snap of chunk\\
-produce predicate chunk\\
-}}
+%example
+\begin{figure}[h]
+  \centering
+\begin{lstlisting}
+field f: Int
 
+predicate pred(r:Ref)
+{
+    acc(r.f)
+}
 
+method m1(r:Ref)
+requires acc(pred(r))
+ensures acc(pred(r))
+ensures unfolding pred(r) in r.f == 0
+{
+
+    unfold pred(r)
+    r.f := 0
+    fold pred(r)
+}
+\end{lstlisting}
+\caption[predicate example]
+   {Simple predicate example. By unfolding the predicate in line 14, we loose the access right to the predicate \textit{pred(r)} and gain the access rights to \textit{r.f}. This allows us to write to the field. By folding the predicate again, we regain the access rights to the predicate, which allows us no exhale the predicate in line 10. Unfolding temporarily unfolds the predicate \textit{pred(r)}, after which we obtain the permission to read the field \textit{r.f}, and also the value of that field. As a result, the assertion \textit{r.f == 0} should always evaluate to true.}
+\end{figure}
 
 \subsection{Magic Wands}
 A magic wand\cite{magicwand} A --* B is a binary connective, which allows that given assertion A is satisfied in the current state, it can be exchanged for the assertion B. Similarly to recursive predicates, the exchange can be initiated by \textit{apply}, whereas \textit{unapply} exchanges assertion B for assertion A. Viper also supports a heuristic to automate when these assertions are exchanged. This functionality can be used to keep track of partial data structures during a traversal.
@@ -401,6 +420,10 @@ The predicate snapshot is used during unfold, fold and unfolding, where unfold c
 %overview
 \subsubsection{Unfold} 
 \label{qUnfold}
+Unfolding a predicate corresponds to exhaling a single predicate, after which we inhale the body of the predicate. The body of the predicate and the information of the values we gain access to, is represented by a snapshot, which in the case of a quantified predicate corresponds is stored in the value map of a quantifier.
+
+%example?
+
 Unfold exhales the permission to the predicate with given arguments as described above. Exhaling will provide you with the snapshot of the predicate, which is inhaled - containing permission and values designated by the snapshot.
 
 \subsubsection{Fold} 
