@@ -238,12 +238,12 @@ Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) 
    {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
 \end{figure}
 
-%summarize
+%summarise
 \begin{figure}[h]
   \centering
 \begin{tabularx}{1\textwidth}{| X |}
 \hline
-\textbf{summarize}\(\ (h_0, f) \) \{\\
+\textbf{summarise}\(\ (h_0, f) \) \{\\
 \ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for field \(f\) \\
 \ident Let \(v\) be a fresh value map\\
 \ident \textit{/* Value summary path conditions */} \\
@@ -256,12 +256,13 @@ Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) 
 \ident \textbf{return} \((v, def, perm)\) \\
 \}\\ \hline
 \end{tabularx}
-\caption[Summarize Quantified Field Permissions]
+\caption[Summarise Quantified Field Permissions]
    {Symbolic execution rules for summarizing quantified field permissions. Eval. Check...}
 \end{figure}
 
 
 \section{Quantified Predicate Permissions}
+\label{qpp}
 In this section we present an adpation of the mentioned solution of quantified field permissions support to allow the support of quantified predicate permissions. 
 As the general form we consider the adaption of the canonical form presented for quantified predicate permissions: 
 \begin{equation}
@@ -407,49 +408,244 @@ After evaluating the expressions denoted by the quantified predicate permission,
 \ident \textbf{return} \( (h_1 \backslash h_{pred})  \cup h'_{pred} \) \\
 \}\\ \hline
 \end{tabularx}
-\caption[Remove a Quantified Field Permission]
-   {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
+\caption[Remove a Quantified Predicate Permission]
+   {Symbolic execution rules for removing a quantified predicate permission. Eval. Check...}
 \label{qpRemove}
 \end{figure}
 
 The definition of removing a permission amount from a quantified epxression does not need to be changed except for the filtering of the quantified chunks. After that, we again iterate through these chunks, taking permission greedily, and raising an error if not enough permission is available. The updated definition can be seen in figure %\ref{qpRemove}.
 
 \subsection{Treatment of Symbolic Values} \label{qppVals}
-The predicate snapshot is used during unfold, fold and unfolding, where unfold corresponds to a field read and fold to field write in the context of a quantified field permission.
+Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. 
+
+
+Unfolding a predicate
+
+%summarise
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{summarise}\(\ (h_0, pred) \) \{\\
+\ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for predicate \(pred\) \\
+\ident Let \(v\) be a fresh value map\\
+\ident \textit{/* Value summary path conditions */} \\
+\ident \textbf{var } \(def := \emptyset \) \\
+\ident \textit{/* Permission summary */} \\
+\ident \textbf{var } \(perm := \lambda r \cdot 0\) \\
+\ident \textbf{foreach } \(pred(a_1, \dots, a_n) \mapsto [v_i(a_1, \dots, a_n), q_i(a_1, \dots, a_n)] \in h_{pred}\) \textbf{do:}\\
+\ident \ident \(def := def \cup \{ \forall a_1, \dots, a_n \cdot 0 < q_i(a_1, \dots, a_n)  \Rightarrow v(a_1, \dots, a_n) = v_i(a_1, \dots, a_n) \} \) \\
+\ident \ident \(perm := \lambda a_1, \dots, a_n \cdots (perm(a_1, \dots, a_n) + q_i(a_1, \dots, a_n)) \) \\
+\ident \textbf{return} \((v, def, perm)\) \\
+\}\\ \hline
+\end{tabularx}
+\caption[Summarise Quantified Field Permissions]
+   {Symbolic execution rules for summarsing quantified predicate permissions. Eval. Check...}
+\end{figure}
 
 %overview
-\subsubsection{Unfold} 
-\label{qUnfold}
-Unfolding a predicate corresponds to exhaling a single predicate, after which we inhale the body of the predicate. The body of the predicate and the information of the values we gain access to, is represented by a snapshot, which in the case of a quantified predicate corresponds is stored in the value map of a quantifier.
-
-%example?
-
-Unfold exhales the permission to the predicate with given arguments as described above. Exhaling will provide you with the snapshot of the predicate, which is inhaled - containing permission and values designated by the snapshot.
-
 \subsubsection{Fold} 
 \label{qFold}
-Exhales the body of the predicate and stores its snapshot in the  snapshot function of the newly generated quantified predicate chunk.
+As mentioned in the background, folding a predicate exchanges the permission of the body with the premission to the predicate which is being folded. As a consequence it creates a new predicate chunk. The predicate chunk contains the values of the permissions hedl by the predicate body previous to folding it, which is called a snapshot of the predicate.
+
+When folding a quantified predicate, we first generate a snapshot based on the current heap. The exhale checks that there is enough permission to the predicate body by summarising the given quantified chunk and removes the permission amount required. 
+Inhaling the predicate provides a new predicate chunk, where the value map holds the snapshot previously generated for the predicate folded.
+
+The exact operations can be seen in figure \ref{qFold}.
+%fold
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{fold}\(\ (h_0, \pi_0, pred(e_1, \dots, e_n))\) \{\\
+\ident \textit{/* evaluate arguments */} \\
+\ident \( \mathbf{var\ } (\pi_{2_1},\underline{e_1}) := eval(h_0, \pi_0, e_1)) \)\\
+\ident [\dots] \\
+\ident \( \mathbf{var\ } (\pi_{2_n},\underline{e_n}) := eval(h_0, \pi_0, e_n)) \)\\
+\\
+\ident \textit{/* generating the predicate's snap value */} \\
+\ident \textbf{var } snapshot \(:=\) \textit{generateSnap}\((h_0, pred, (\underline{e_1}, \dots, \underline{e_n}))\)\\
+\\
+\ident \textbf{var } \((h_1, \pi_{n+1}) :=\) exhale\((h_0, \pi_n, snapshot) \) \\
+\ident \textbf{var } \((h_2, \pi_{n+2}) :=\) inhale\((h_1, \pi_{n+1}, pred(e_1, \dots, e_n)\) \\
+\ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
+\}\\ \hline
+\end{tabularx}
+\caption[Unfold  a Quantified Predicate Permission]
+   {Symbolic execution rules for folding a quantified predicate} %expand description: check, remove....
+\label{qFold}
+\end{figure}
+
+\subsubsection{Unfold} 
+\label{qUnfold}
+Unfolding a predicate corresponds to evaluating the predicate snapshot, exhaling a single predicate, after which we inhale the body of the predicate. Figure \ref{qUnfold}
+
+
+%unfold
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{unfold}\(\ (h_0, \pi_0, pred(e_1, \dots, e_n))\) \{\\
+\ident \textit{/* evaluate arguments */} \\
+\ident \( \mathbf{var\ } (\pi_{2_1},\underline{e_1}) := eval(h_0, \pi_0, e_1)) \)\\
+\ident [\dots] \\
+\ident \( \mathbf{var\ } (\pi_{2_n},\underline{e_n}) := eval(h_0, \pi_0, e_n)) \)\\
+\\
+\ident \textit{/* read the predicate's snap value */} \\
+\ident \textbf{var } \((v, \) \textit{def}, \textit{perm}\() :=\) \textit{summarise} \((h_0, pred)\) \\
+\ident \textbf{var } snapshot \(:=\) \( v (\underline{e_1}, \dots, \underline{e_n})\)\\
+\\
+\ident \textbf{var } \((h_1, \pi_{n+1}) :=\) exhale\((h_0, \pi_n, pred(e_1, \dots, e_n)\) \\
+\ident \textbf{var } \((h_2, \pi_{n+2}) :=\) inhale\((h_1, \pi_{n+1}, snapshot)\) \\
+\ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
+\}\\ \hline
+\end{tabularx}
+\caption[Unfold  a Quantified Predicate Permission]
+   {Symbolic execution rules for the fold operation} %expand description: check, remove....
+\label{qUnfold}
+\end{figure}
 
 \subsection{Unfolding}
 Unfolding is desugared as before, by using the unfold definition of  \ref{qUnfold} on the predicate, evaluating the expression e and finally folding the predicate as described in \ref{qFold}.
 
-\subsection{Framing}
-
 %silicon
 \subsection{Silicon}
-The implementation of Siilicon is very close to the approach presented in section 2.
-Analogous to the quantified field permissions unquantified predicates are also treated as quantified permissions, where the permission is restricted to the specific predicate argument values.
+%general introduction.
 
-\subsubsection{Producing multiple Quantified Predicates}
+%precomputing 
+As for quantified field permission, Silicon analyses the program given, creating a list of quantified predicates. Additionally, it also precomputes a set of predicate arguments used to express the general predicate locations in quantified heap chunks and assertions generated, as well as a general snapshot.
+
+%chunk definition
+If a predicate is quantified, both single predicates and quantified predicates are represetned by a quantified predicate chunk. As defined in \ref{shr}, a quantified predicate chunk consists of a predicate name, the set of general locations, a value function, a permission term. Additionally, it also holds the inverse function, which...? what is ist used for?
+
+A single predicate is restricted to the following form:\\
+
+\begin{equation}
+	\mathbf{pred}(\mathrm{a_1, ..., a_n})\mapsto [s(\mathrm{a_1, ..., a_n}), p((\mathrm{a_1} == \underline{a_1}, \dots, \mathrm{a_n} == \underline{a_n}) ? \underline{p}]
+\end{equation}
+
+%inhale && exhale
+The adaptions for inhaling and exhaling are build on the approach presented in section \ref{qpp}.
+
+%triggering
+
+%silicon
+\subsection{Carbon}
+Carbon, in contrast to Silicon, models the heap using Masks. The implementation for quantified fields is based on translating the statement and its properties into a number of forall expressions in Boogie. Quantified field chunks are not defined.
+
+Apart fom inhaling and exhaling quantified field permissions, there are no changes in the translation. There is no adaption that need to be done for reading or writing a field.
+
+\subsubsection{Inhale}
+Inhaling consists of the following steps:
+
+Inhaling a quantified field permission consists of the following steps:
 \begin{itemize}
-\item create new quantified predicate heap chunk
-\item declare inverse functions and two assumtpions declaring its properties as defined above.
+\item Define the inverse function by assuming the two inverse functions definitions as defined before
+\item Assume that receiver references where the conditions applies to true, are non null
+\item Assume that the permission denoted is nonnegative for all fields
+\item Assume that the receiver epxression is injectiivty
+\item Assume that for all locations where the condition evaluates to true, gains the defined permission
+\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locaitons, have the same value as before.
 \end{itemize}
 
-Z3 Code-wise: The assumption of non-null fields is not necessary.
+%carbon inhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\\
+\ident Let  \(v\)  be a fresh value map \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
+\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\}\\ \hline
+\end{tabularx}
+\caption[Unfold  a Quantified Predicate Permission]
+   {Symbolic execution rules for the fold operation} %expand description: check, remove....
+\label{qUnfold}
+\end{figure}
 
-\subsubsection{Producing a single Quantified Predicate}
+\subsubsection{exhale}
 
+\begin{itemize}
+\item Inverse Assumptions
+\item non null assumption
+\item permission nonnegative for all fields
+\item assume injectiivty
+\item define permission
+\item independent locations
+\end{itemize}
+
+\subsubsection{inhale}
+
+%carbon inhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\ident \textbf{assume } \( \forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \((perm(pred(a_1, \dots, a_n))) \)\\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{tr\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\}\\ \hline
+\end{tabularx}
+\caption[carbon quantified predicate inhale]
+   {Translating quantified predicate inhale operation} %expand description: check, remove....
+\label{qpcInhale}
+\end{figure}
+
+
+%carbon exhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/*wild card assumptions */} \\
+\\
+\ident \textit{/* permission positive */} \\
+\\
+\ident \textit{/* Injectivity Assertion */} \\
+\ident \textbf{assert\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
+\\
+\ident \textit{/* sufficient permission assertion*/} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define updated permission */} \\
+\\
+\ident \textit{/* define independent permissions */} \\
+\}\\ \hline
+\end{tabularx}
+\caption[carbon quantified predicate exhale]
+   {Translating quantified predicate exhale operation} %expand description: check, remove....
+\label{qpcExhale}
+\end{figure}
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
