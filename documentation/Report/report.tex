@@ -267,11 +267,11 @@ Injectivity &  \( \mathbf{forall} \   x_1:T, x_2:T :: (x_1 != x_2)\ \&\& c(x_1) 
 \section{Quantified Predicate Permissions}
 \label{qpp}
 In this section we present an adaption of the mentioned solution of quantified field permissions support to allow the support of quantified predicate permissions. 
-As the general form we consider the adaption of the canonical form presented for quantified predicate permissions: 
+As the general form we consider the adaption of the canonical form presented for quantified field permissions: 
 \begin{equation}
  \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)), 
 \end{equation}
-where \(c(x)\) is a boolean expression,\(\ e_i(x)\) denotes an expression expression of the predicate \textit{pred} ith's arguments and \(p(x)\) permission expression.
+where \(c(x)\) is a boolean expression,\(\ e_i(x)\) denotes the expression conforming to the type of the ith arguments of the predicate \textit{pred} and \(p(x)\) permission expression.
 
 Introducing this new form allows us to express permission to more complex structures such as a set of lists.
 
@@ -287,17 +287,17 @@ To explain the adaption needed for the implementation, we again discuss the answ
 \end{enumerate}
 %Example
 
-The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. the fourth question is answered  in section \ref{qppVals}. 
+The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. the fourth and fifth question is answered  in section \ref{qppVals}. 
 
 \subsection{Symbolic Heap Representation} \label{shr}
 In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. In the previous design, the quantified field heap chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
 For quantified predicate chunk we use the predicate instead of the field as identification, where we use a set of general arguments to express permission and values. The general form of such a heap chunk conforms to:
 \begin{equation}
-	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [s(\mathrm{arg_1, ..., arg_n}), p(inv(\mathrm{arg_1, ..., arg_n}))]
+	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [v(\mathrm{arg_1, ..., arg_n}), p(\mathrm{arg_1, ..., arg_n}))],
 \end{equation}
-where the values of the value map conform to the snapshot of a predicate instantiation.
+where \textit{v} represents a value map, where the values represent the snapshot of a predicate instantiation.
 
-In order to translate the given permission to that form, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to get from a general location to the variable used in the original quantified permission expression. Before, that location was expressed by the neutral location \(r\). In this case, the general location is expressed by the predicate name and its arguments, \textit{pred}\((arg_1, \dots, arg_n)\). As soon as a single argument of two predicate location differs, it is not the same location.
+In order to translate the given permission to that form, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to get from a general location to the variable used in the original quantified permission expression. For a field, that location was expressed by the neutral location \(r\). For predicates, the general location is expressed by the predicate name and its arguments, \textit{pred}\((arg_1, \dots, arg_n)\). As soon as a single argument of two predicate location differs, it is not the same location.
 A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not needed to define the inverse function. The adapted definition of the inverse function is only depending on the arguments themselves.
 
 As before the new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier given the arguments of the predicate. The adapted inverse function is defined as:\\
@@ -310,7 +310,7 @@ As before the new inverse function returns a value of type \(T\) corresponding t
 
 The inverse function is, as before, a partial function defined only for the values where the condition of the original quantifier applies. For these cases, the inverse of the arguments defined by the argument expressions should be equal to the original value of the quantifier. Starting from arbitrary arguments, given that the inverse of these arguments satisfies the condition, each argument should be equal to its argument expression if evaluated with the inverse of all arguments.
 
-Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result to guarantee the existence of the defined inverse function. The location expressed by the quantifier has to injective. Since predicate name is unchanged, this is guaranteed as long as at least one argument expression is guaranteed to be unequal for two locations of the quantifier. This property can be expressed by the following equation:\\
+Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result to guarantee the existence of the defined inverse function. The location expressed by the quantifier has to be injective. Since the predicate name remains unchanged, this is guaranteed as long as at least one argument expression is guaranteed to be unequal for two locations of the quantifier. This property can be expressed by the following equation:\\
 
 \begin{tabularx}{1\textwidth}{ X}
  \(\forall x_1:T, x_2: T :: c(x_1) \land c(x_2) \land (e_1(x_1) = e_1(x_2)) \land \dots \land  (e_n(x_1) = e_n(x_2)) \Rightarrow \) \\
