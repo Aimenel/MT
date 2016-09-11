@@ -667,10 +667,41 @@ A representation of a Magic Wand\cite{magicwand} depends on the form of de wand 
 
 %Quantifiers
 \section{Combinations of Quantifiers}
-Both carbon and silicon currently do not allow merging of pure and permission-based quantifiers, nor does it allow combinations of multiple quantified field permissions. Of course, this can be circumvented by writing multiple quantifiers by repeating the definition of the variables and conditions.  
-To decrease the code size for specifying the properties desired and support user-friendliness for mixing quantifiers in both applications, we wished to further allow the following combinations of pure and permission-based quantifiers:
+Silver currently does not allow merging of pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by writing multiple quantifiers by repeating the definition of the variables and conditions.
+To decrease the code size for specifying the properties desired and support user-friendliness it would however be desirable to lift some of these restricitons.
 
-%user-given triggers?
+We consider the support of the following expressions:
+\begin{equation}
+\label{eq1}
+	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x)))
+\end{equation}
+\begin{equation}
+	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
+\end{equation}
+where {\it trs} is a set of triggers, {\it c(x)} is  a boolean expression,{\it e(x)} denotes an expression, either pure or permission-based, which was already supported inside quantifier before.  If {\it e(x)} is indeed a permission expression, it consists of an injective mapping to a set of locations, where {\it p(x)} denotes a permission function as described in the chapters before.
+
+The first expression allows to combine two expressions on the right-hand side of the implication. The second expression  grants us the ability to refine a condition.
+
+\subsection{Conjunction}
+A conjunction of two expressions is currently supported if the quantifier is pure only. As a first solution we propose to adapt the symbolic execution rules to handle these cases.
+If the expression is fully pure, this is handled as previously.
+
+The expressions of the combinations may be depending on each other, which is why they have to be evaluated sequentially. 
+If both expressions denote a permission-based expression, the injectivity and inverse function need to be defined per expression. Besides the evaluation of the condition, each expression is handled independently.
+
+As a second solution, we therefore propose to rewrite the given quantifiers to two quantifiers, which allows us to reuse the symbolic execution rules used before: 
+\begin{equation}
+\begin{aligned}
+	(\mathbf{forall} \; x:T :: \{trs\}\   c(x)  \Rightarrow e_1(x)) \ \&\& \\
+	(\mathbf{forall} \; x:T :: \{trs\}\   c(x) \Rightarrow  e_1(x))
+\end{aligned}
+\end{equation}
+
+The triggers are passed along to both quantifiers.
+
+\subsection{Refining}
+
+
 
 \begin{itemize}
 \item conjunction of field and predicate epxressions, as well as pure assertions:
@@ -678,7 +709,7 @@ To decrease the code size for specifying the properties desired and support user
 \begin{equation}
 	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))),
 \end{equation}
-where {\it trs} is a set of triggers, {\it c(x)} is  a boolean expression,{\it e(x)} denotes an expression which could either be a pure expression or a permission expression depending on x, in which case {\it e(x)} consists of an injective mapping to a set of locations and some permission function {\it p(x)} as described in the chapters before.
+
 
 \item adding additional conditions by implication:
 %TODO: link?
@@ -695,7 +726,7 @@ We considered two ways to expand the given design to this setting:
 \item As a first solution, we could adapt the rules for inhaling and exhaling permission-based quantifiers to handle such cases.
 \item desugaring these forall expressions to the form we obtain a set of quantified field permissions, quantified predicate permissions and pure quantifiers.
 \end{itemize}
-As it is, combinations may be depending on each other, which means each conjunction as to be evaluated sequentially. As a result there is barely any gain in not desugaring the terms mentioned before. Therefore we suggest two rewriting rules to desugare conjunctions and implications within a forall expression.
+ As a result there is barely any gain in not desugaring the terms mentioned before. Therefore we suggest two rewriting rules to desugare conjunctions and implications within a forall expression.
 
 \subsection{Rewriting Rules}
 \label{rewriting}
