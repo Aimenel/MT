@@ -19,6 +19,40 @@
          numbers=left,
  }
 
+\usepackage{color}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  otherkeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
 \begin{document}
 \maketitle
 \newpage
@@ -665,97 +699,94 @@ A representation of a Magic Wand\cite{magicwand} depends on the form of de wand 
 
 %example
 
-%Quantifiers
+%Combinations of Quantifiers
 \section{Combinations of Quantifiers}
-Silver currently does not allow merging of pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by writing multiple quantifiers by repeating the definition of the variables and conditions.
-To decrease the code size for specifying the properties desired and support user-friendliness it would however be desirable to lift some of these restricitons.
+Silver currently does not allow to merge pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by repeating the definitions prior to the quantified expression.
+To decrease the code size for specifying the properties desired and support user-friendliness it would however be desirable to lift this restriction.
 
-We consider the support of the following expressions:
+We consider adding the support of the following expressions:
 \begin{equation}
 \label{eq1}
-	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x)))
+	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))
 \end{equation}
 \begin{equation}
+\label{eq2}
 	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
 \end{equation}
-where {\it trs} is a set of triggers, {\it c(x)} is  a boolean expression,{\it e(x)} denotes an expression, either pure or permission-based, which was already supported inside quantifier before.  If {\it e(x)} is indeed a permission expression, it consists of an injective mapping to a set of locations, where {\it p(x)} denotes a permission function as described in the chapters before.
+where {\it trs} is a set of triggers and {\it c(x)} a boolean expression. The expression {\it e(x)} can be either pure or permission-based. In the second case it should be either of the expressions which were already supported before - a field permission, predicate permission or magic wand permission - or combination of these expressions. For the first newly introduced quantified expression, the sub-expressions \(e_1(x))\) and \(e_2(x)\) have to be injective, as should be \( e(x)\) in the second equation.
 
-The first expression allows to combine two expressions on the right-hand side of the implication. The second expression  grants us the ability to refine a condition.
+The first expression allows to combine two expressions on the right-hand side of the implication. The second expression  grants us the ability to refine a condition. Both are currently only allowed if they are entirely pure. An example using this new feature would be: 
 
-\subsection{Conjunction}
-A conjunction of two expressions is currently supported if the quantifier is pure only. As a first solution we propose to adapt the symbolic execution rules to handle these cases.
-If the expression is fully pure, this is handled as previously.
+\begin{lstlisting}
+field f: Int
+field g: Int
 
-The expressions of the combinations may be depending on each other, which is why they have to be evaluated sequentially. 
-If both expressions denote a permission-based expression, the injectivity and inverse function need to be defined per expression. Besides the evaluation of the condition, each expression is handled independently.
-
-As a second solution, we therefore propose to rewrite the given quantifiers to two quantifiers, which allows us to reuse the symbolic execution rules used before: 
-\begin{equation}
-\begin{aligned}
-	(\mathbf{forall} \; x:T :: \{trs\}\   c(x)  \Rightarrow e_1(x)) \ \&\& \\
-	(\mathbf{forall} \; x:T :: \{trs\}\   c(x) \Rightarrow  e_1(x))
-\end{aligned}
-\end{equation}
-
-The triggers are passed along to both quantifiers.
-
-\subsection{Refining}
-
-
-
-\begin{itemize}
-\item conjunction of field and predicate epxressions, as well as pure assertions:
-%TODO link to specific definition
-\begin{equation}
-	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))),
-\end{equation}
-
-
-\item adding additional conditions by implication:
-%TODO: link?
-\begin{equation}
-	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
-\end{equation}
-with the same definitions of .
-\end{itemize}.
+method m1(r:Ref, xs: Seq[Ref], b:Int)
+requires forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
+ensures forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
+ensures b? (x.f == 2) : (x.g == 3)
+{
+    if (b)
+    {
+        x.f := 2
+    }
+    else
+    {
+        x.g := 3
+    }
+}
+\end{lstlisting}
 
 Other combinations using boolean expressions are currently not considered unless they are part of a boolean expression. This is due to the fact, that Silver does not supported them permission-based expressions as well.
 
-We considered two ways to expand the given design to this setting: 
-\begin{itemize}
-\item As a first solution, we could adapt the rules for inhaling and exhaling permission-based quantifiers to handle such cases.
-\item desugaring these forall expressions to the form we obtain a set of quantified field permissions, quantified predicate permissions and pure quantifiers.
-\end{itemize}
- As a result there is barely any gain in not desugaring the terms mentioned before. Therefore we suggest two rewriting rules to desugare conjunctions and implications within a forall expression.
+\subsection{Conjunction}
+As a first solution we propose to adapt the symbolic execution rules to handle these cases.
+If the entire expression is fully pure, this is handled as previously.The sub-expressions of the combinations may be depending on each other. An example for this would be: 
+\begin{equation}
+\label{eq1}
+	\mathbf{forall} \; x:T :: \{\}\  x\ \mathrm{in \ Set} \{\dots\} \Rightarrow acc(x.f) \ \&\& \ (x.f > 0)
+\end{equation}
+As a consequence, both expressions have to be evaluated sequentially. 
+Let's consider the case where both subexpressions denote a field permission. Due to the sequentiality constraint, we treat the first expression as before. We cannot generally reuse the inverse function and injectivity definition for the second expression as defined before. A adaption to the rules would therefore skip the evaluation of the condition, but essentially repeat all other steps for the second expression.
+If one of the expressions is pure, we treat it independently as before.
 
-\subsection{Rewriting Rules}
-\label{rewriting}
-A conjunction of two expression is desugared by rewriting the entire forall expreeion into two forall expressions, duplicating variables, condition and triggers. Triggers are expected to be valid for both newly generated forall expressions.
-
+As a second solution, we therefore propose to rewrite the given quantifiers to two quantifiers, so that the rewritten quantifiers allow us to reuse the symbolic execution rules presented: 
 \begin{equation}
 \begin{aligned}
+	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))  \mapsto \\
 	(\mathbf{forall} \; x:T :: \{trs\}\   c(x)  \Rightarrow e_1(x)) \ \&\& \\
 	(\mathbf{forall} \; x:T :: \{trs\}\   c(x) \Rightarrow  e_1(x))
 \end{aligned}
 \end{equation}
 
-An implication is rewritten to the logical equivalent of the conjunction of both conditions on the left-hand side of the implication.
+As mentioned before, there is only a minimal advantage in adapting the symbolic rules due to the fact that the condition is evaluated multiple times. The value could also be cached. The triggers are passed along to both quantifiers.
+
+\subsection{Refining}
+Similar to the solution presented for the conjunction of expressions within a quantifier, besides having the option of adapting the symbolic execution rules for the previously shown solutions, we can desugare the expression to the already supported form by using its logical equal:
 \begin{equation}
+\begin{aligned}
+	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x))  \mapsto \\
 	\mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x))
+\end{aligned}
 \end{equation}
 
+\subsection{Example}
+The forall expression of the example is rewritten to the following way: \\
+
+\begin{tabularx}{1\textwidth}{ X }
+\(\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (b \Rightarrow  acc(x.f)) \:\&\&\ (!b \Rightarrow acc(x.g)) \mapsto \) \\
+\((\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (b \Rightarrow  acc(x.f))) \:\&\&\ (\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (!b \Rightarrow acc(x.g)) \mapsto \) \\
+\((\mathbf{forall\ } x:Ref :: (x\ in\ xs)  \:\&\&\ b \Rightarrow acc(x.f)) \:\&\&\ (\mathbf{forall\ } x:Ref :: (x\ in\ xs)  \:\&\&\ !b \Rightarrow  acc(x.g)) \) \\
+\end{tabularx}
+
+
 \subsection{Implementation}
-The rewriting rules are implemented in the parser. As a result they are executed for both Carbon and Silicon.
-
-User-given triggers are handed over. Since suitability of the triggers is not tested for each rewritten forall expression, triggers need to suite all and clauses of an expression. Pure quantifiers are not rewritten. 
-%TODO
- In Carbon, triggers are generated after the rewriting step in case of empty triggers.
-
+The implementation for supporting the combinations presented uses the rewriting rules mentioned above. The desugaring takes place in Silver. Both Carbon and Silicon accept the same program with the already rewritten expressions.
 
 %Nested Quantifiers
 \section{Nested Quantifiers}
 %Why nested quantifiers?
-In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nestes quantifiers which are desirable to support.
+In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers which are desirable to support.
 
 In the first structure, all variables are defined at once, allowing condition and expression to depend on all of them:\\
 
