@@ -233,25 +233,39 @@ As for the concept for predicates, automatically exchanging the assertions of a 
 
 A second ghost operation \textit{package} calculates a suitable footprint, which is then exchanged for a new wand instance.
 
-%example...
-
 %Quantified Field Permissions
 \subsubsection{Quantified Field Permissions}
 \label{qf}
-The generalisation of quantified permissions as defined before is building on top of the concept presented for quantified field permissions of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}.
-It defines a new definition for quantified heap chunks and an approach to inhale and exhale quantified field permissions.
+
+The concept presented for quantified field permissions was presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. The supported quantified field permission epxression is defined as:
+
+\begin{equation}
+\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))
+\end{equation}
+
+The boolean expression \(c(x)\) denotes a condition, under which a set of fields, defined by the reference-typed expression \(e(x)\) and the field \(f\), gain the permission amount expressed in the permission-typed expression \(p(x)\).
+
+The presented solution redefines field chunks, introduces an ways to inhale and exhale quantified field permissions. Additionally, these changes enforce adaptions for inhaling and exhaling field permissions, as well as writing and reading field values.
+%example
 
 %Quantified Field Chunk
-\paragraph{Quantified Field Chunk}
-Heap chunks are generalised to denote permission to an unbounded number of locations simultaneously.
-In order to avoid an existential query in making a quantified permission chunk depending on the variable of the original forall expression, an inverse function is introduced, which maps a location to the initial value of the variable. To guarantee the existence of an inverse function, it is necessary that the expression denoting the receiver must be injective, which does however not restrict the data structures that can be handled by this approach as long as correctly specified.This allows us to define a quantified permission chunk of the form r.f -> [v(r), p(r)], where r represents the quantified receiver, p(r) an expression denoting the permission amount and v(r) a value map used to hold the values of the locations.
-General form: r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)]
+\paragraph{Quantified Field Chunk:}
+
+An unquantified heap chunk is a tuple of a reference and its value. To support quantified field chunks, a new typ of chunk defined, which potentially holds an unbounded set of references and values.
+A straightforward implementation of the expression would result in an heap of the form  \((x, f) \mapsto [v(x), c(x) ? p(x) : 0)]\), where \(v\) corresponds to a value map storing the known values of the set. In order to check the permission amount of a field location, this would result in a existential query over all quantified field chunks.
+
+To avoid this, we change the representation to express the permission and values for a general location \(r\): \(r.f \mapsto [v(r), c(r) ? p(r) : 0)]\). To translate the initial field permisison expression to that form, we define an inverse function mapping the location \(r\) to the value of the corresponding quantifier variable.
+
+To guarantee the existence of an inverse function, it is necessary that the expression \(e\) must be injective. This does not restrict the data structures that can be handled by this approach as long as correctly specified. This allows us to define a quantified permission chunk of the form \(r.f -> [v(r), p(r)]\), where r represents the quantified receiver, p(r) an expression denoting the permission amount and v(r) a value map used to hold the values of the locations.
+General form:\(r.f \mapsto [v(r), c(inv(r)) ? p(inv(r)) : 0)]\)
+
+%example
 
 %Inhale
-\paragraph{Inhale}
-Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
-Inhaling generates a new quantified heap chunks  r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)] after evaluating the condition, receiver expression and permission expression, as well as introducing the inverse function inv and a fresh value map v(r).
-The inverse function is only defined if the given condition c(x) or c(inv(r)) holds.The definition adds two quantified conditions to the path condition starting from a general location and the original variable types variable.
+\paragraph{Quantified Inhaling:}
+%Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
+Inhaling generates a new quantified heap chunks  r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)] after evaluating the condition, receiver expression and permission expression, as well as introducing the inverse function of the epxression \(e(x)\) and a fresh value map \(v\).
+The inverse function is only partially defined for the values where the given condition \(c(x)\) holds. The definition adds two quantified conditions to the path condition starting from a general location and the original variable types variable.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -277,10 +291,8 @@ The inverse function is only defined if the given condition c(x) or c(inv(r)) ho
 \label{qfInhale}
 \end{longtable}
 
-%injectivity
-
 %Exhale
-\paragraph{Exhale}
+\paragraph{Quantified Exhaling:}
 Exhaling again evaluates the condition, receiver expression and permission expression, checks the injectivity of the receiver expression, introduces its inverse function and proceeds to remove the permission from the heap.
 The removing is done by walking through all quantified field chunks with the same field f, removing permissions greedily or fails if there is not enough permission. Updating chunks is expressed via point-wise defined functions defining the permission amounts.
 
@@ -335,6 +347,8 @@ The removing is done by walking through all quantified field chunks with the sam
    {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
 \end{figure}
 
+%Single Chunk treatment
+
 %summarise
 \begin{figure}[h]
   \centering
@@ -356,6 +370,14 @@ The removing is done by walking through all quantified field chunks with the sam
 \caption[Summarise Quantified Field Permissions]
    {Symbolic execution rules for summarizing quantified field permissions. Eval. Check...}
 \end{figure}
+
+%Field Read
+
+%Field Write
+
+%Evaluate
+
+%Other stuff
 
 
 \section{Quantified Predicate Permissions}
