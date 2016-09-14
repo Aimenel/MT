@@ -87,22 +87,24 @@ As a generalisation, we introduce an adaption of this solution to allow permissi
 
 \section{Background}
 %Permissions in general
-In this chapter we give an overview of the theory needed to understand the proposed generalisation of quantified permissions, which is intended as an extension to the support already integrated in Viper\cite{viper}.
+In this chapter we give an overview of the theory needed to understand the proposed generalisation of quantified permissions, which is intended as an extension to the support of quantified fields already integrated in Viper\cite{viper}\cite{viper2014}.
 
 Viper is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics. It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verification language. Currently, it includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers \textit{Carbon} and \textit{Silicon}, as well as several front-ends for programming languages. A front-end translate the programming language into \textit{Silver} and further uses one or both verifiers for verification.
 
 \textit{Carbon}  is based on verification condition generation. It translates the given silver program to Boogie\cite{leino2008boogie}, which proves the generated code.
+state is modelled by maps representing the heap and permissions held.
 
 \textit{Silicon} is based on symbolic execution. It is based on the SMT solver Z3\cite{de2008z3} and Smallfoot-style Symbolic Execution\cite{berdine2005smallfoot}, where the symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions holding properties obtained while evaluating or executing commands.
+state represented by heap chunks and path conditions
 
+\subsection{Overview}
+This section presents on overview of Viper\cite{viper}\cite{viper2014}, including the syntax and features permissive in Silver, as well as the general approaches for verifying them in Carbon and Silicon. 
 
-\subsection{Silver Overview}
-
-Silver has a fixed heap implementation. A program consists of global declaration called fields, methods, function, predicates and custom domains.
+Silver has a fixed heap implementation. A program consists of global declaration called fields, predicates, functions, methods, and custom domains.
 
 %fields, methods, functions, predicates, custom domains.
 \paragraph{Permissions: }
-Permission logics were designed to define which locations of a heap are accessible. Silver is based on fractional permissions with values between 0 and 1.  1 denotes full permissions, which is equal to write and read permission, and any permission greater than 0 allowing to read values of a location. In Silver, there are various constructs allowing to transfer permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount corresponds to full permission.
+Permission logics were designed to define which locations of a heap are accessible. Silver is based on fractional permissions with values between 0 and 1.  1 denotes full permissions, which is equal to write and read permission, and any permission greater than 0 allowing to read values of a location. In Silver, there are various constructs allowing to transfer permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting exclusive permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount corresponds to full permission.
 
 \paragraph{Program State: }
 The program state of Silver includes the current heap, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations with permission. Reasoning about properties can be reduced to inhaling and exhaling assertions. Inhaling is equal to adding the permission if the expression is permission-based, or assuming a property if the assertion is pure. Exhaling translates to removing permission or asserting. If the permission of a location is lost, we also lose information about its value.
@@ -158,12 +160,16 @@ domain IArray {
 \end{figure}
 
 \subsection{Unbounded Heap Structures}
+To represetn unbounded heap structures, there are currently three concepts used: Predicates, Magic Wands and Quantified Fields Permissions. Where Predicates allows to define unbounded structures recursively, magic wands allow us to keep track of heap structures during their traversal. Quantified Field Permissions additionally allow to express unbounded structures which ware not recursively defined.
+
 \subsubsection{Recursive Predicates}
 "Predicates can be used both to abstract over conctrete assertions and to write recursive specifications of heap data structures."
 
 Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name,  list of formal parameters and a body. 
 Since predicates can be recursive, for example in case of the example in figure \ref{rec}, and the predicate could potentially be unrolled endlessly, Silver introduces a predicate instance separately from its body.
 The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
+
+"until and unfold is applied, predicate instances are treated as opaque, in the sense that the permissons and logical facts are entailed by their definitions are not directly availabe to the verifier. unfold, fold: ghost operations"
 
 %example recursive
 \begin{figure}[h]
@@ -210,9 +216,24 @@ ensures unfolding pred(r) in r.f == 0
 \end{figure}
 
 \subsubsection{Magic Wands}
-A magic wand\cite{magicwand} A --* B is a binary connective, which allows that given assertion A is satisfied in the current state, it can be exchanged for the assertion B. Similarly to recursive predicates, the exchange can be initiated by \textit{apply}, whereas \textit{unapply} exchanges assertion B for assertion A. Viper also supports a heuristic to automate when these assertions are exchanged. This functionality can be used to keep track of partial data structures during a traversal.
+A magic wand A --* B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic\cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
 
-%example please. Explain more closely how apply and unapply work. Cite other stuff?
+A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permision required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side\cite{magicwand}.
+
+As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchaning the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
+
+\vbox{
+\begin{longtable}{ p{0.9\textwidth} } 
+\( apply A --*B \mapsto \) \\ 
+\ident \(exhale A--*B \)\\
+\ident \(exhale A\)\\
+\ident \(inhale B\)\\
+\end{longtable}
+}
+
+A second ghost operation \textit{package} calculates a suitable footprint, which is then exchanged for a new wand instance.
+
+%example...
 
 %Quantified Field Permissions
 \subsubsection{Quantified Field Permissions}
