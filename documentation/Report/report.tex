@@ -55,12 +55,19 @@
 }
 
 \begin{document}
+\pagenumbering{gobble}
+\clearpage
 \newcommand*{\ident}{\hspace*{0.5cm}}
 
 \maketitle
 \newpage
+
+\clearpage
+\pagenumbering{Roman}
 \tableofcontents
 \newpage
+\clearpage
+\pagenumbering{arabic}% Arabic page numbers (and reset to 1)
 \section{Abstract}
 \section{Introduction}
 %viper implementation?
@@ -89,37 +96,46 @@ As a generalisation, we introduce an adaption of this solution to allow permissi
 %Permissions in general
 In this chapter we give an overview of the theory needed to understand the proposed generalisation of quantified permissions, which is intended as an extension to the support of quantified fields already integrated in Viper\cite{viper}\cite{viper2014}.
 
-Viper is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics. It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verification language. Currently, it includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers \textit{Carbon} and \textit{Silicon}, as well as several front-ends for programming languages. A front-end translate the programming language into \textit{Silver} and further uses one or both verifiers for verification.
+Viper is an verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics. It is designed to facilitates the implementation of verification techniques for programs, allowing developers to focus on the abstraction of higher-level language features to its intermediate verification language. It includes an intermediate verification language \textit{Silver}, two automatic back-end verifiers \textit{Carbon} and \textit{Silicon}, as well as several front-ends translating other programming languages to Silver for verification.
+
+For the generalisation we allow new quantified expressions in Silver. To support the verification of these, we adapted both Carbon and Silicon. 
 
 \textit{Carbon}  is based on verification condition generation. It translates the given silver program to Boogie\cite{leino2008boogie}, which proves the generated code.
-state is modelled by maps representing the heap and permissions held.
+In Carbon, the state is modelled by maps representing the heap and permissions held.
 
-\textit{Silicon} is based on symbolic execution. It is based on the SMT solver Z3\cite{de2008z3} and Smallfoot-style Symbolic Execution\cite{berdine2005smallfoot}, where the symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions holding properties obtained while evaluating or executing commands.
-state represented by heap chunks and path conditions
+\textit{Silicon} is based on the SMT solver Z3\cite{de2008z3} and Smallfoot-style Symbolic Execution\cite{berdine2005smallfoot}. The symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions, which contain the properties obtained while evaluating or executing commands.
 
 \subsection{Overview}
-This section presents on overview of Viper\cite{viper}\cite{viper2014}, including the syntax and features permissive in Silver, as well as the general approaches for verifying them in Carbon and Silicon. 
+This section presents on overview of Viper\cite{viper}\cite{viper2014}, including the syntax and features permissive in Silver, as well as the general approaches for verifying certain expressions in Carbon and Silicon.
 
-Silver has a fixed heap implementation. A program consists of global declaration called fields, predicates, functions, methods, and custom domains.
+A Silver program consists of global declaration called fields, predicates, functions, methods, and custom domains.
 
 %fields, methods, functions, predicates, custom domains.
 \paragraph{Permissions: }
-Permission logics were designed to define which locations of a heap are accessible. Silver is based on fractional permissions with values between 0 and 1.  1 denotes full permissions, which is equal to write and read permission, and any permission greater than 0 allowing to read values of a location. In Silver, there are various constructs allowing to transfer permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting exclusive permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount corresponds to full permission.
+Permission logics were designed to define which locations of a heap are accessible. Silver works with fractional permissions with values between 0 and 1. 1 denotes full permission, which is equal to write and read permission. Any permission greater than 0 allows to read values of a location. 
+
+In Silver, there are various constructs allowing to transfer permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting exclusive permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount corresponds to full permission.
 
 \paragraph{Program State: }
 The program state of Silver includes the current heap, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations with permission. Reasoning about properties can be reduced to inhaling and exhaling assertions. Inhaling is equal to adding the permission if the expression is permission-based, or assuming a property if the assertion is pure. Exhaling translates to removing permission or asserting. If the permission of a location is lost, we also lose information about its value.
 
+Carbon uses maps to describe the heap and permissions held. 
+
+In Silicon, the state representation includes a set of heap chunks and path conditions.
+
 \paragraph{Types and Domains: }
-%multiset
 The built-in primitive types of Silver consists of  Int , Bool, Ref (Reference) and Perm.  Additionally,  polymorphic sequences such as Seq[T] and sets Set[T] are included. Domains further allow to define custom domain types, which may include axioms and functions to define its properties.
 
 \paragraph{Fields: }
-The globally defined fields exist for all references and have a designated type. Together with predicates and magic wands, they make up the heap. Values of the heap can only be accessed if sufficient permission is held.
+Fields are globally defined and have a designated type. On declaration, the field exists for all references. In order to read a field value, a permission amount greater than 0 is necessary. When writing to a field, full permission is required.
+
+In symbolic execution, a field is stored in a heap chunk of the following form:
+
 
 \paragraph{Methods: }
 Methods consists of a name, arguments, pre- and postconditions, as well as its body. The preconditions must include sufficient permissions to allow all heap dereferences used in the method body. During verification, the verifiers inhale the preconditions and try to prove the postconditions after the execution of the body.
 
-\paragraph{Functions: } %check please
+\paragraph{Functions: }
 Similarly to methods, functions consist of a name, preconditions, postconditions and optionally a body. Contrary to methods, the expressions within the body are restricted and must be pure. They may be used in assertions and axiom definitions.
 
 \paragraph{Example: }
@@ -160,16 +176,14 @@ domain IArray {
 \end{figure}
 
 \subsection{Unbounded Heap Structures}
-To represetn unbounded heap structures, there are currently three concepts used: Predicates, Magic Wands and Quantified Fields Permissions. Where Predicates allows to define unbounded structures recursively, magic wands allow us to keep track of heap structures during their traversal. Quantified Field Permissions additionally allow to express unbounded structures which ware not recursively defined.
+To represent unbounded heap structures, Viper supports the following concepts: Predicates, Magic Wands and Quantified Fields Permissions. Where Predicates allows to define unbounded structures recursively, magic wands allow us to keep track of heap structures during their traversal. Quantified Field Permissions additionally allow to express unbounded structures which ware not recursively defined.
 
 \subsubsection{Recursive Predicates}
-"Predicates can be used both to abstract over conctrete assertions and to write recursive specifications of heap data structures."
+%"Predicates can be used both to abstract over concrete assertions and to write recursive specifications of heap data structures."
 
 Recursive Predicates\cite{parkinson2005separation} are typically used as part of separation logic to specify linked data structures such as lists and trees. Its definition consists of a name,  list of formal parameters and a body. 
-Since predicates can be recursive, for example in case of the example in figure \ref{rec}, and the predicate could potentially be unrolled endlessly, Silver introduces a predicate instance separately from its body.
+Since predicates can be recursive, for example in case of the example in figure \ref{rec}, and the predicate could potentially be unrolled endlessly, Silver treats predicate instances as opaque. Permissions and the logical facts entailed by its body are not directly available to the verifier. We use ghost operations to obtain the logical facts from a predicate instance and vice versa.
 The permission of the predicate may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for the permission of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate.
-
-"until and unfold is applied, predicate instances are treated as opaque, in the sense that the permissons and logical facts are entailed by their definitions are not directly availabe to the verifier. unfold, fold: ghost operations"
 
 %example recursive
 \begin{figure}[h]
@@ -218,9 +232,9 @@ ensures unfolding pred(r) in r.f == 0
 \subsubsection{Magic Wands}
 A magic wand A --* B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic\cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
 
-A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permision required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side\cite{magicwand}.
+A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side\cite{magicwand}.
 
-As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchaning the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
+As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
 
 \vbox{
 \begin{longtable}{ p{0.9\textwidth} } 
@@ -236,8 +250,9 @@ A second ghost operation \textit{package} calculates a suitable footprint, which
 %Quantified Field Permissions
 \subsubsection{Quantified Field Permissions}
 \label{qf}
+The implementation for quantified field permissions is depending on the verifier used. We first summarize how quantified field permissions are supported in a verification generator such as Carbon, and explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. 
 
-The concept presented for quantified field permissions was presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. The supported quantified field permission epxression is defined as:
+The supported quantified field permission expression is defined as:
 
 \begin{equation}
 \mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))
@@ -245,16 +260,94 @@ The concept presented for quantified field permissions was presented in the pape
 
 The boolean expression \(c(x)\) denotes a condition, under which a set of fields, defined by the reference-typed expression \(e(x)\) and the field \(f\), gain the permission amount expressed in the permission-typed expression \(p(x)\).
 
-The presented solution redefines field chunks, introduces an ways to inhale and exhale quantified field permissions. Additionally, these changes enforce adaptions for inhaling and exhaling field permissions, as well as writing and reading field values.
-%example
+\subsubsection{Condition Generation and Quantified Field Permissions}
+
+Since field permissions are represented using Maps, it is sufficient to introduce a new translation for inhaling and exhaling quantified field permissions.
+
+\paragraph{Inhaling a Quantified Field Permission}
+Inhaling a quantified field permission consists of the following steps:
+\begin{itemize}
+\item Define the inverse function by assuming the two inverse functions definitions as defined before
+\item Assume that receiver references where the conditions applies to true, are non null
+\item Assume that the permission denoted is nonnegative for all fields
+\item Assume that the receiver expression is injectiive
+\item Assume that for all locations where the condition evaluates to true, gains the defined permission
+\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
+\end{itemize}
+
+%carbon inhale quantified field. Frame?
+\begin{longtable}{| p{0.9\textwidth} |}
+\hline
+\textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
+\ident \textbf{assume\ } \( \forall r:Ref :: c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
+\ident \textbf{assume } \( \forall x:T :: \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\\
+\ident \textit{/* assume permission is positive */} \\
+\ident \textbf{assume } \( \forall x:T  \{\}:: \underline{c}(x)  \Rightarrow \underline{p}(x) >= 0 \) \\
+\\
+\ident \textit{/* all receiver is non-null */} \\
+\ident \textbf{assume } \( \forall x:T \{\}:: \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
+\\
+\ident \textit{/* assume e(x) is injective */} \\
+\ident \textbf{assume\ }\(\forall y_1: T, y_2:T\ \{\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall r:Ref :: \{tr\} c(inv(r)) \Rightarrow perm(r) = \) \textbf{old} \((perm(r))  + p(inv(r))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall r:Ref :: \{tr\}\ \neg c(inv(r)) \Rightarrow perm(r) = \) \textbf{old} \((perm(r)) \)\\
+\ident \textbf{assume\ } \(\forall o:Obj, f_o:Field :: \{tr\}\ (f_o != f) \Rightarrow perm(o.f) = \) \textbf{old} \((perm(o.f)) \)\\
+\}\\ \hline
+\caption[carbon quantified field inhale]
+   {Translating quantified predicate inhale operation} %expand description: check, remove....
+\label{qfcInhale}
+\end{longtable}
+
+\paragraph{Exhaling a Quantified Field Permission}
+
+%carbon exhale quantified field
+\begin{longtable}{| p{0.9\textwidth} |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/*wild card assumptions */} \\
+\\
+\ident \textit{/* permission positive */} \\
+\\
+\ident \textit{/* Injectivity Assertion */} \\
+\ident \textbf{assert\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
+\\
+\ident \textit{/* sufficient permission assertion*/} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define updated permission */} \\
+\\
+\ident \textit{/* define independent permissions */} \\
+\}\\ \hline
+\caption[carbon quantified field exhale]
+   {Translating quantified predicate exhale operation} %expand description: check, remove....
+\label{qfcExhale}
+\end{longtable}
+
+
+\subsubsection{Symbolic Execution and Quantified Field Permissions}
+
+The presented solution redefines field chunks, introduces an ways to inhale and exhale quantified field permissions. Additionally, these changes enforce adaptations for inhaling and exhaling field permissions, as well as writing and reading field values.
+
+
 
 %Quantified Field Chunk
 \paragraph{Quantified Field Chunk:}
+An field heap chunk \((r, f) \mapsto [v, p]\) is a defined for a reference and a field and holds the its value and permission amount held. \(r\) denotes a specific reference, \(f\) is a field defined in the program. The value \(v\) has the same type as the field \(f\), whereas \(p\) is a permission. 
 
-An unquantified heap chunk is a tuple of a reference and its value. To support quantified field chunks, a new typ of chunk defined, which potentially holds an unbounded set of references and values.
-A straightforward implementation of the expression would result in an heap of the form  \((x, f) \mapsto [v(x), c(x) ? p(x) : 0)]\), where \(v\) corresponds to a value map storing the known values of the set. In order to check the permission amount of a field location, this would result in a existential query over all quantified field chunks.
+To support quantified field chunks, a new type of chunk needs to defined. This chunk potentially holds an unbounded set of references and values. A straightforward implementation of the expression would result in an heap of the form  \((x, f) \mapsto [v(x), c(x) ? p(x) : 0)]\), where \(v\) corresponds to a value map storing the known values of the set. In order to check the permission amount of a field location, this would result in a existential query over all quantified field chunks.
 
-To avoid this, we change the representation to express the permission and values for a general location \(r\): \(r.f \mapsto [v(r), c(r) ? p(r) : 0)]\). To translate the initial field permisison expression to that form, we define an inverse function mapping the location \(r\) to the value of the corresponding quantifier variable.
+To avoid this, we change the representation to express the permission and values for a general location \(r\) : Ref.  To translate the initial permission expression to that form, we define an inverse function mapping the location \(r\) to the value of the corresponding quantifier variable. The new definition for a quantified field chunk is \(r.f \mapsto [v(r), c(r) ? p(r) : 0)]\).
 
 To guarantee the existence of an inverse function, it is necessary that the expression \(e\) must be injective. This does not restrict the data structures that can be handled by this approach as long as correctly specified. This allows us to define a quantified permission chunk of the form \(r.f -> [v(r), p(r)]\), where r represents the quantified receiver, p(r) an expression denoting the permission amount and v(r) a value map used to hold the values of the locations.
 General form:\(r.f \mapsto [v(r), c(inv(r)) ? p(inv(r)) : 0)]\)
@@ -264,8 +357,9 @@ General form:\(r.f \mapsto [v(r), c(inv(r)) ? p(inv(r)) : 0)]\)
 %Inhale
 \paragraph{Quantified Inhaling:}
 %Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
-Inhaling generates a new quantified heap chunks  r.f -> [v(r), c(inv(r)) ? p(inv(r)) : 0)] after evaluating the condition, receiver expression and permission expression, as well as introducing the inverse function of the epxression \(e(x)\) and a fresh value map \(v\).
-The inverse function is only partially defined for the values where the given condition \(c(x)\) holds. The definition adds two quantified conditions to the path condition starting from a general location and the original variable types variable.
+Inhaling a quantified field expression generates a new quantified heap chunk. 
+In order to inhale a quantified field permission, we first evaluate the condition, receiver expression and permission expression and introduce the inverse function of the expression \(e(x)\). The inverse function is only partially defined for the values where the given condition \(c(x)\) holds. The definition if the inverse function is added to the path conditions.
+After that a fresh value map \(v\) is introduced. As a last step, we generate the new quantified heap chunk and add it to the heap.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -273,7 +367,7 @@ The inverse function is only partially defined for the values where the given co
 \ident Let y be a fresh symbolic constant of type\( \ T\) \\
 \ident \textit{/* Symbolically evaluate source-level expressions */} \\
 \ident \( \mathbf{var\ } (\pi_1, \underline{c}(y)) := eval(h_0, \pi_0, c_y)) \)\\
-\ident \( \mathbf{var\ } (\pi_2,\underline{e}(y)) := eval(h_0, \pi_0, e_y)) \)\\
+\ident \( \mathbf{var\ } (\pi_2,\underline{e}(y)) := eval(h_0, \pi_0, e_11y)) \)\\
 \ident \( \mathbf{var\ } (\pi_3,\underline{p}(y)) := eval(h_0, \pi_0, p_y))) \)\\
 \ident \( \mathbf{var\ } \pi_4 := \pi_3 \backslash \{\underline{c}(y)\} \)\\
 \\
