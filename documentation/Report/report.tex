@@ -69,6 +69,8 @@
 \clearpage
 \pagenumbering{arabic}% Arabic page numbers (and reset to 1)
 \section{Abstract}
+Viper supports a quantified field permission of the form \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\). The quantifier may only be depending on one variable and express field a field permission. Viper consists of two verifiers. Carbon is based on condition generation, whereas Silicon is based symbolic execution. In this report, we present the approach for both types of verifiers to generalise this expression allowed to support predicate and magic wands. We also present rewriting rules for combining pure and permission-based quantifiers, as well as the adaption necessary to these approaches in order to support nested quantifiers.
+We implemented both quantified predicate permissions and combinations of quantifiers in Carbon and Silicon.
 \section{Introduction}
 %viper implementation?
 In order to verify heap-manipulating programs as shared mutable data structures, separation logic\cite{reynolds2002separation} and implicit frames\cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
@@ -261,25 +263,23 @@ The supported quantified field permission expression is defined as:
 The boolean expression \(c(x)\) denotes a condition, under which a set of fields, defined by the reference-typed expression \(e(x)\) and the field \(f\), gain the permission amount expressed in the permission-typed expression \(p(x)\).
 
 \subsubsection{Condition Generation and Quantified Field Permissions}
-
+\label{cgqf}
+In condition generation approaches, fields are
 Since field permissions are represented using Maps, it is sufficient to introduce a new translation for inhaling and exhaling quantified field permissions. Reading or Writing is done as before. 
 
-\paragraph{Inhaling a Quantified Field Permission}
-Inhaling a quantified field permission consists of the following steps:
-\begin{itemize}
-\item Define the inverse function by assuming the two inverse functions definitions as defined before
-\item Assume that receiver references where the conditions applies to true, are non null
-\item Assume that the permission denoted is nonnegative for all fields
-\item Assume that the receiver expression is injectiive
-\item Assume that for all locations where the condition evaluates to true, gains the defined permission
-\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
-\end{itemize}
+\paragraph{Inhaling a Quantified Field Permission: }
+Inhaling a field permission \(r.f\) is translated an updated permission for the specified location \(Mask(r, f)\), as well as an non-null assumption for the reference \(r\). 
+In order to frame the quantifier \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\), we create a new map and define the adapted permissions for the inhaled field permissions, as well as the permission which remain unchanged. In order to trigger these permissions for all read or write expressions later on, it is necessary to express the new permissions for a neutral location. A neutral field location is defined as \(r.f \), where \(r\) is a reference, and \(f\) a field.
+In order to express the locations updated by the quantifier, we introduce a inverse function \(e_{-1}\), which maps the locations to the corresponding value x of type \(T\). Using that quantifier we can check, whether a location is altered b the quantifier by evaluating the condition as \(c(e_{-1}(r)\). The gained permission is equal to \(p(e_{-1}(r)\). 
+The introduction enforces, that the expression \(e(x)\) should be injective. When inhaling a quantified field permission, the injectivity of \(e(x)\) is assumed along with the property, that all references affected by the quantifier are non-null.
+
+The exact translation can be seen in table \ref{qfconditionInhale}.
 
 %carbon inhale quantified field. Frame?
-\begin{longtable}{| p{0.9\textwidth} |}
+\begin{longtable}{| p{1\textwidth} |}
 \hline
 \textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \) \{\\
-\ident Let \textit{qpMask} be a new Mask   \\
+\ident Let \textit{qpMask} be a new Mask\\
 \ident \textbf{havoc} qpMask \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
@@ -298,26 +298,19 @@ Inhaling a quantified field permission consists of the following steps:
 \ident \textit{/* define independent permissions */} \\
 \ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\ \{ inv(r)\}\ \neg c(inv(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
 \ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\ (f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
-\ident \textbf{return} qpMask \\
+\ident Mask \(=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified field inhale]
    {Translating quantified field inhale operation} %expand description: check, remove....
-\label{qfcInhale}
+\label{qfconditionInhale}
 \end{longtable}
 
-\paragraph{Exhaling a Quantified Field Permission}
-Exhaling a quantified field permission consists of the following steps:
-\begin{itemize}
-\item Define the inverse function by assuming the two inverse functions definitions as defined before
-\item Assert that receiver references where the conditions applies to true, are non null
-\item Assert that the permission denoted is nonnegative for all fields
-\item Assert that the receiver expression is injectiive
-\item Assume that for all locations where the condition evaluates to true, looses the defined permission
-\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
-\end{itemize}
+\paragraph{Exhaling a Quantified Field Permission: }
+Exhaling a quantified field permission \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\), includes two checks. First, we assert that the expression \(e(x)\) is injective. Then, we check that we possess the permission needed for exhaling the permission for all locations. If both are true, we again introduce the inverse function and express the permissions of the map as when inhaling. 
+The translation is displayed in table \ref{qfconditionExhale}.
 
 %carbon exhale quantified field
-\begin{longtable}{| p{0.9\textwidth} |}
+\begin{longtable}{| p{1\textwidth} |}
 \hline
 \textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \) \{\\
 \ident Let \textit{qpMask} be a new Mask   \\
@@ -343,7 +336,7 @@ Exhaling a quantified field permission consists of the following steps:
 \}\\ \hline
 \caption[carbon quantified field exhale]
    {Translating quantified field exhale operation} %expand description: check, remove....
-\label{qfcExhale}
+\label{qfconditionExhale}
 \end{longtable}
 
 
@@ -484,20 +477,13 @@ The removing is done by walking through all quantified field chunks with the sam
 %Evaluate
 
 %Other stuff
-\seciton{Adaptions Field Permissions}
-%usergiven triggers
-%no condition
+\section{Adaptions Field Permissions Carbon}
+The approach presented in section \ref{cgqf} did not include any trigger. To restrict the 
+Some expressions generated in Carbon did not include any triggers. To reduce unnecessary invocations, we introduced new triggers for these expressions.
 
-\paragraph{Inhaling a Quantified Field Permission}
-Inhaling a quantified field permission consists of the following steps:
-\begin{itemize}
-\item Define the inverse function by assuming the two inverse functions definitions as defined before
-\item Assume that receiver references where the conditions applies to true, are non null
-\item Assume that the permission denoted is nonnegative for all fields
-\item Assume that the receiver expression is injectiive
-\item Assume that for all locations where the condition evaluates to true, gains the defined permission
-\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
-\end{itemize}
+Additionally we intended to support user-given triggers. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add the trigger to the expressions defining the new Mask. Since they describe the Mask properties are expressed from a neutral field read, they are triggered for all relevant expressions regardlessly. The injectivity assertion on the other hand, should never be triggered. For that purpose, we introduce a new function to set as a trigger, which is later on never used.
+
+The last two changes are a general change to the approach as shown before. As a Carbon-specific change , we decided to reuse the trigger generation, which Carbon uses for pure quantifiers. As a current restriction, we impede the generation of additional variables for triggers due to the fact that nested quantifiers are not yet supported in carbon.
 
 %carbon inhale quantified field. Frame?
 \begin{longtable}{| p{0.9\textwidth} |}
@@ -507,14 +493,14 @@ Inhaling a quantified field permission consists of the following steps:
 \ident \textbf{havoc} qpMask \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
 \ident \textbf{assume\ } \( \forall r:Ref ::\{inv(r)\}\ c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* all receiver is non-null */} \\
-\ident \textbf{assume } \( \forall x:T ::\{\}\ \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
+\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\ \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
 \\
 \ident \textit{/* assume e(x) is injective */} \\
-\ident \textbf{assume\ }\(\forall y_1: T, y_2:T ::\{\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\ident \textbf{assume\ }\(\forall y_1: T, y_2:T ::\{e(y_1), e(y_2), trs(y_1), trs(y_2)\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
 \\
 \ident \textit{/* define updated permission */} \\
 \ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{ inv(r)\}\ c(inv(r)) \Rightarrow qpMask(r, f) = Maks(r.f) - Mask(inv(r), f)\)\\
@@ -525,20 +511,9 @@ Inhaling a quantified field permission consists of the following steps:
 \ident \textbf{return} qpMask \\
 \}\\ \hline
 \caption[carbon quantified field inhale]
-   {Translating quantified field inhale operation} %expand description: check, remove....
+   {The expressions generated during a quantified inhale are adapted for the first inverse function assumption, as well as the non-null assumption. Both expressions are triggering on the expression denoting the receiver, and the user-given or automatically generated trigger.} %expand description: check, remove....
 \label{qfcInhale}
 \end{longtable}
-
-\paragraph{Exhaling a Quantified Field Permission}
-Exhaling a quantified field permission consists of the following steps:
-\begin{itemize}
-\item Define the inverse function by assuming the two inverse functions definitions as defined before
-\item Assert that receiver references where the conditions applies to true, are non null
-\item Assert that the permission denoted is nonnegative for all fields
-\item Assert that the receiver expression is injectiive
-\item Assume that for all locations where the condition evaluates to true, looses the defined permission
-\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
-\end{itemize}
 
 %carbon exhale quantified field
 \begin{longtable}{| p{0.9\textwidth} |}
@@ -547,14 +522,14 @@ Exhaling a quantified field permission consists of the following steps:
 \ident Let \textit{qpMask} be a new Mask   \\
 \ident \textbf{havoc} qpMask \\
 \ident \textit{/* assert e(x) is injective */} \\
-\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\}\  y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{triggerFun(e(y_1)), triggerFun(e(y_2))\}\  y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
 \\
 \ident \textit{/* sufficient permission */} \\
 \ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow Mask(e(x), f) \geq p(x)\)\\
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\  \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\  \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
 \ident \textbf{assume\ } \( \forall r:Ref ::\{inv(r)\}\  c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* define updated permission */} \\
@@ -566,7 +541,7 @@ Exhaling a quantified field permission consists of the following steps:
 \ident \textbf{return} qpMask \\
 \}\\ \hline
 \caption[carbon quantified field exhale]
-   {Translating quantified field exhale operation} %expand description: check, remove....
+   {Translating quantified field exhale operation. trs signifies a user-defined trigger or if no trigger was given, a set of auto-generated triggers as used for pure quantifiers}
 \label{qfcExhale}
 \end{longtable}
 
