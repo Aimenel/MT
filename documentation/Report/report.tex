@@ -470,13 +470,16 @@ Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. After e
 \end{longtable}
 
 \paragraph{Evaluation}
-\paragraph{Field Read}
-\paragraph{Field Write}
+The value information of a quantified field chunk is stored in its value map \(v\). It represents a under-specified total function and since the field is already defined by the heap chunk, is defined per reference
 
-%summarise
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+%domain?
+A symbolic heap may consist of multiple chunks for the same field. The domains of the value maps may overlap such that the "value of one location \(x.f\) may be represented by multiple maps when the receiver \(x\) is quantified over and the permissions to different instantiations of the qunatifier are recorded in different chunks. Therefore, all of these value maps need to be considered when evaluating a field access."
+
+To provide a simple translation for field-lookups, we define a function which summarises all value maps of a field \(f\) lazily before evaluating an expression \(e.f\), as well as the permission expressions held per location. Path conditions are not considered.
+
+"A symbolic heap may contain fractional permissions, 
+
+\begin{longtable}{| p{1\textwidth} | }
 \hline
 \textbf{summarise}\(\ (h_0, f) \) \{\\
 \ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for field \(f\) \\
@@ -487,21 +490,47 @@ Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. After e
 \ident \textbf{var } \(perm := \lambda r \cdot 0\) \\
 \ident \textbf{foreach } \((r.f \mapsto [v_i(r), q_i(r)]) \in h_f \) \textbf{do:} \\
 \ident \ident \(def := def \cup \{ \forall r \cdot 0 < q_i(r)  \Rightarrow v(r) = v_i(r) \} \) \\
-\ident \ident \(perm := \lambda r \cdots (perm(r) + q_i(r)) \) \\
-\ident \textbf{return} \((v, def, perm)\) \\
+\ident \ident \(perm := \lambda r \cdot (perm(r) + q_i(r)) \) \\
+\ident \textbf{return } \((v, def, perm)\) \\
 \}\\ \hline
-\end{tabularx}
 \caption[Summarise Quantified Field Permissions]
-   {Symbolic execution rules for summarizing quantified field permissions. Eval. Check...}
-\end{figure}
+   {These symbolic execution rules for summarizing quantified field permissions correspond to figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarizing the values for the defined locations and the permission for all references.}
+\end{longtable}
 
-%Field Read
 
-%Field Write
 
-%Evaluate
+\paragraph{Field Read}
+inhaling and exhaling pure boolean expressions:  evaluating expression and either adding the resulting symbolic execution to the path condition or checking it (Append A)
 
-%Other stuff
+\begin{longtable}{| p{1\textwidth} | }
+\hline
+\textbf{eval}\(\ (h_0, \pi_0, e.f) \) \{\\
+\ident \textbf{var } \((\pi_1, \underline{e}) :=\) \textbf{eval} \(h_0, \pi_0, e)\) \\
+\ident \textbf{var } \((v, def, perm) :=\) \textbf{summarise} \(h_0, f)\) \\
+\ident \textbf{check } \(\pi_1 \models 0 < perm(\underline{e}) \) \\
+\ident \textbf{return } \(\pi_1 \cup def, v(\underline(e))\) \\
+\}\\ 
+\\
+\textbf{eval}\(\ (h_0, \pi_0, \mathbf{forall} x :: e(x)) \) \{\\
+\ident Let \(y\) be a fresh symbolic constant
+\ident \textbf{var } \((\pi_1, \underline{e}(y)) :=\) \textbf{eval} \(h_0, \pi_0, e(y))\) \\
+\ident \textbf{return } \((\{  b \in \pi_1 | y  \notin FV(b)\} \cup \{ \forall x \cdot (\bigwedge_{ b \in \pi_1 | y  \notin FV(b)}  b[x / y])\}, \forall x \cdot \underline{c}(x))\) \\
+\}\\ 
+\hline
+\caption[Summarise Quantified Field Permissions]
+   {These symbolic execution rules for summarizing quantified field permissions correspond to figure 6 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarizing the values for the defined locations and the permission for all references.}
+\end{longtable}
+
+
+
+\paragraph{Field Write}
+%field write: exhale acc(e_1.f)< inhale acc(e_2.f)<
+
+
+\paragraph{Framing}
+
+\paragraph{Controlling Quantifier Instantiations}
+%TODO
 
 \section{Generalising Quantified Field Permissions in Carbon}
 The approach presented in section \ref{cgqf} did not include any trigger. To restrict the 
