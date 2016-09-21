@@ -545,6 +545,7 @@ Additionally we intended to support user-given triggers. Most generated expressi
 
 The last two changes are a general change to the approach as shown before. As a Carbon-specific change , we decided to reuse the trigger generation, which Carbon uses for pure quantifiers. As a current restriction, we impede the generation of additional variables for triggers due to the fact that nested quantifiers are not yet supported in carbon.
 
+
 %carbon inhale quantified field. Frame?
 \begin{longtable}{| p{0.9\textwidth} |}
 \hline
@@ -630,8 +631,12 @@ To explain the adaption needed for the implementation, we again discuss the answ
 
 The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. the fourth and fifth question is answered  in section \ref{qppVals}. 
 
+%inverse function
+
+%injectivity test
 
 \subsection{Verification Condition Generation for Quantified Predicate Permissions}
+In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. An predicate location is  of the predicate \textit{pred} with n arguments is represented as \textit{Mask}\([null, pred(arg_1, \dots, arg_n)]\). . Similarly for the approach for quantified predicate permissions, we do not need to change anything in the current implementation, only extend it with a translation for inhaling and exhaling quantified predicate permissions. To translate a quantified predicate permission, we can reuse the solution presented for quantified fields, replacing the field locations with predicate locations. Additionally, we replace the neutral field location \(r\) with a set of stand-in arguments.
 
 %representation
 
