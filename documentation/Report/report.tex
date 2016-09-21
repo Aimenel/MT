@@ -190,7 +190,7 @@ A second ghost operation \textit{package} calculates a suitable footprint, which
 
 %Quantified Field Permissions
 \subsection{Quantified Field Permissions}
-
+\label{qf}
 %In order to 
 %\begin{enumerate}
 %\item How to model the program state, including permissions and values?
@@ -200,7 +200,7 @@ A second ghost operation \textit{package} calculates a suitable footprint, which
 %\item When to preserve (frame) an expression's value across heap changes?
 %\end{enumerate}
 
-\label{qf}
+
 The implementation of the quantified field permissions support depends on the verifier used. We first summarize how quantified field permissions are supported in the verification generator Carbon, and then explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. 
 
 The supported shape of quantified field permission expression is defined as:
@@ -630,6 +630,113 @@ To explain the adaption needed for the implementation, we again discuss the answ
 
 The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. the fourth and fifth question is answered  in section \ref{qppVals}. 
 
+
+\subsection{Verification Condition Generation for Quantified Predicate Permissions}
+
+%representation
+
+Carbon, in contrast to Silicon, models the heap using Masks. The implementation for quantified fields is based on translating the statement and its properties into a number of forall expressions in Boogie. Quantified field chunks are not defined.
+
+Apart from inhaling and exhaling quantified field permissions, there are no changes in the translation. There is no adaption that need to be done for reading or writing a field.
+
+%carbon inhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\\
+\ident Let  \(v\)  be a fresh value map \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
+\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\}\\ \hline
+\end{tabularx}
+\caption[Unfold  a Quantified Predicate Permission]
+   {Symbolic execution rules for the fold operation} %expand description: check, remove....
+\label{qUnfold}
+\end{figure}
+
+\subsubsection{exhale}
+
+\begin{itemize}
+\item Inverse Assumptions
+\item non null assumption
+\item permission nonnegative for all fields
+\item assume injectiivty
+\item define permission
+\item independent locations
+\end{itemize}
+
+\subsubsection{inhale}
+
+%carbon inhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\ident \textbf{assume } \( \forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \((perm(pred(a_1, \dots, a_n))) \)\\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{tr\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\}\\ \hline
+\end{tabularx}
+\caption[carbon quantified predicate inhale]
+   {Translating quantified predicate inhale operation} %expand description: check, remove....
+\label{qpcInhale}
+\end{figure}
+
+
+%carbon exhale quantified field
+\begin{figure}[h]
+  \centering
+\begin{tabularx}{1\textwidth}{| X |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textit{/*wild card assumptions */} \\
+\\
+\ident \textit{/* permission positive */} \\
+\\
+\ident \textit{/* Injectivity Assertion */} \\
+\ident \textbf{assert\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
+\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
+\\
+\ident \textit{/* sufficient permission assertion*/} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define updated permission */} \\
+\\
+\ident \textit{/* define independent permissions */} \\
+\}\\ \hline
+\end{tabularx}
+\caption[carbon quantified predicate exhale]
+   {Translating quantified predicate exhale operation} %expand description: check, remove....
+\label{qpcExhale}
+\end{figure}
+
 \subsection{Symbolic Heap Representation} \label{shr}
 In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. In the previous design, the quantified field heap chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
 For quantified predicate chunk we use the predicate instead of the field as identification, where we use a set of general arguments to express permission and values. The general form of such a heap chunk conforms to:
@@ -880,125 +987,6 @@ A single predicate is restricted to the following form:\\
 
 %inhale && exhale
 The adaption for inhaling and exhaling are build on the approach presented in section \ref{qpp}.
-
-%triggering
-
-%silicon
-\subsection{Carbon}
-Carbon, in contrast to Silicon, models the heap using Masks. The implementation for quantified fields is based on translating the statement and its properties into a number of forall expressions in Boogie. Quantified field chunks are not defined.
-
-Apart from inhaling and exhaling quantified field permissions, there are no changes in the translation. There is no adaption that need to be done for reading or writing a field.
-
-\subsubsection{Inhale}
-Inhaling consists of the following steps:
-
-Inhaling a quantified field permission consists of the following steps:
-\begin{itemize}
-\item Define the inverse function by assuming the two inverse functions definitions as defined before
-\item Assume that receiver references where the conditions applies to true, are non null
-\item Assume that the permission denoted is nonnegative for all fields
-\item Assume that the receiver expression is injectiive
-\item Assume that for all locations where the condition evaluates to true, gains the defined permission
-\item Assume that all independent locations, which include all fields f where the condition evaluates to false, all other fields, as well as magic wands and predicate locations, have the same value as before.
-\end{itemize}
-
-%carbon inhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\hline
-\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
-\ident \textit{/* Inverse Assumptions */} \\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
-\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
-\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
-\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\\
-\ident Let  \(v\)  be a fresh value map \\
-\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
-\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
-\ident \textbf{return} \( (h_1, \pi_6) \) \\
-\}\\ \hline
-\}\\ \hline
-\end{tabularx}
-\caption[Unfold  a Quantified Predicate Permission]
-   {Symbolic execution rules for the fold operation} %expand description: check, remove....
-\label{qUnfold}
-\end{figure}
-
-\subsubsection{exhale}
-
-\begin{itemize}
-\item Inverse Assumptions
-\item non null assumption
-\item permission nonnegative for all fields
-\item assume injectiivty
-\item define permission
-\item independent locations
-\end{itemize}
-
-\subsubsection{inhale}
-
-%carbon inhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
-\ident \textit{/* Inverse Assumptions */} \\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
-\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
-\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
-\ident \textbf{assume } \( \forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
-\\
-\ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
-\\
-\ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \((perm(pred(a_1, \dots, a_n))) \)\\
-\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{tr\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
-\}\\ \hline
-\end{tabularx}
-\caption[carbon quantified predicate inhale]
-   {Translating quantified predicate inhale operation} %expand description: check, remove....
-\label{qpcInhale}
-\end{figure}
-
-
-%carbon exhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
-\ident \textit{/*wild card assumptions */} \\
-\\
-\ident \textit{/* permission positive */} \\
-\\
-\ident \textit{/* Injectivity Assertion */} \\
-\ident \textbf{assert\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
-\\
-\ident \textit{/* sufficient permission assertion*/} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
-\\
-\ident \textit{/* define updated permission */} \\
-\\
-\ident \textit{/* define independent permissions */} \\
-\}\\ \hline
-\end{tabularx}
-\caption[carbon quantified predicate exhale]
-   {Translating quantified predicate exhale operation} %expand description: check, remove....
-\label{qpcExhale}
-\end{figure}
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
