@@ -41,6 +41,7 @@
 \pagenumbering{gobble}
 \clearpage
 \newcommand*{\ident}{\hspace*{0.5cm}}
+\newcommand{\wand}{\ensuremath{\mathbin{-\!\!*}}}
 
 \maketitle
 \newpage
@@ -166,21 +167,21 @@ ensures unfolding pred(r) in r.f == 0
 }
 \end{lstlisting}
 \caption[predicate example]
-   {Simple predicate example. By unfolding the predicate in line 14, we lose the access right to the predicate instance\textit{pred(r)} and gain the access rights to the field \textit{r.f}. This allows us to write to the field . By folding the predicate again, we regain the access rights to the predicate, which allows us no exhale the predicate in line 10. Unfolding temporarily unfolds the predicate \textit{pred(r)}, after which we obtain the permission to read the field \textit{r.f}, and also the value of that field. As a result, the assertion \textit{r.f == 0} should always evaluate to true.}
+   {Simple predicate example. By unfolding the predicate in line 14, we lose the access right to the predicate instance \textit{pred(r)} and gain the access rights to the field \textit{r.f}. This allows us to write to the field . By folding the predicate again, we regain the access rights to the predicate, which allows us no exhale the predicate in line 10. Unfolding temporarily unfolds the predicate \textit{pred(r)}, after which we obtain the permission to read the field \textit{r.f}, and also the value of that field. As a result, the assertion \textit{r.f == 0} evaluates to true.}
 \label{predicateExample}
 \end{figure}
 
 \subsection{Magic Wands}
-A magic wand A --* B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic\cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
+A magic wand A \(\wand\) B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic\cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
 
 A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side\cite{magicwand}.
 
 As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
 
 \vbox{
-\begin{longtable}{ p{0.9\textwidth} } 
-\( apply A --*B \mapsto \) \\ 
-\ident \(exhale A--*B \)\\
+\begin{longtable}{ p{1\textwidth} } 
+\( apply A \wand B \mapsto \) \\ 
+\ident \(exhale A \wand B \)\\
 \ident \(exhale A\)\\
 \ident \(inhale B\)\\
 \end{longtable}
@@ -278,7 +279,7 @@ The translation is displayed in table \ref{qfconditionExhale}.
 \ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\}\  y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
 \\
 \ident \textit{/* sufficient permission */} \\
-\ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow Mask(e(x), f) \geq p(x)\)\\
+\ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow Mask(e(x), f) \geq \underline{p}(x)\)\\
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
@@ -302,6 +303,7 @@ The translation is displayed in table \ref{qfconditionExhale}.
 \end{longtable}
 
 \subsubsection{Symbolic Execution Rules for Quantified Field Permissions}
+\label{seqfp}
 The solution presented in  \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} introduces a new type of heap chunk, new rules for inhaling and exhaling single and quantified field permissions, as well as for reading and writing these field values.
 
 %Quantified Field Chunk
@@ -498,43 +500,6 @@ A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the 
 %triggering
 %framing
 
-\subsection{Motivational Example}
-\begin{figure}[h]
-  \centering
-\begin{lstlisting}
-function read(a: IArray, i:Int) : Int
-requires acc(loc(a, i).val)
-{
-    loc(a, i).val
-}
-
-method m1(a:IArray, index:Int, v:Int)
-requires index >= 0 && index < len(a)
-requires forall i:Int :: i >= 0 && i < len(a) ==> acc(loc(a, i).val)
-ensures forall i:Int :: i >= 0 && i < len(a) ==> acc(loc(a, i).val)
-ensures loc(a, index).val == old(loc(a, index).val) + v
-{
-    loc(a, index).val := read(a, index) + v
-}
-
-/* Encoding of arrays */
-
-field val: Int
-
-domain IArray {
-  function loc(a: IArray, i: Int): Ref
-  function len(a: IArray): Int
-
-  axiom length_nonneg {
-    forall a: IArray :: len(a) >= 0
-  }
-}
-\end{lstlisting}
-\caption[silver]
-   {example of a Viper program}
-\label{rec}
-\end{figure}
-
 
 \section{Generalising Quantified Field Permissions in Carbon}
 \label{genField}
@@ -547,7 +512,7 @@ The last two changes are a general change to the approach as shown before. As a 
 
 
 %carbon inhale quantified field. Frame?
-\begin{longtable}{| p{0.9\textwidth} |}
+\begin{longtable}{| p{1\textwidth} |}
 \hline
 \textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \) \{\\
 \ident Let \textit{qpMask} be a new Mask   \\
@@ -577,7 +542,7 @@ The last two changes are a general change to the approach as shown before. As a 
 \end{longtable}
 
 %carbon exhale quantified field
-\begin{longtable}{| p{0.9\textwidth} |}
+\begin{longtable}{| p{1\textwidth} |}
 \hline
 \textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \) \{\\
 \ident Let \textit{qpMask} be a new Mask   \\
@@ -608,8 +573,8 @@ The last two changes are a general change to the approach as shown before. As a 
 
 \section{Quantified Predicate Permissions}
 \label{qp}
-In this section we present an adaption of the mentioned solution of quantified field permissions support to allow the support of quantified predicate permissions. 
-As the general form we consider the adaption of the canonical form presented for quantified field permissions: 
+In order to generalise the form of quantified permissions, we lift the restriciton on the location type. In this section we discuss how the presented solution for quantified fiel permission has to be adapted in order to support quantified predicate permissions. 
+As the general form of a quantified predicate permission we consider the following adaption of the form presented for quantified field permissions: 
 \begin{equation}
  \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)), 
 \end{equation}
@@ -617,8 +582,6 @@ where \(c(x)\) is a boolean expression,\(\ e_i(x)\) denotes the expression confo
 
 Introducing this new form allows us to express permission to more complex structures such as a set of lists.
 
-\subsection{General Approach}
-%Technical Challenges of it
 To explain the adaption needed for the implementation, we again discuss the answers to the following questions:
 \begin{enumerate}
 \item How to model the program state, including permissions and values?
@@ -629,148 +592,144 @@ To explain the adaption needed for the implementation, we again discuss the answ
 \end{enumerate}
 %Example
 
-The first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. the fourth and fifth question is answered  in section \ref{qppVals}. 
-
-%inverse function
-
-%injectivity test
+For Verification Condition Generation, these questions are answered in the following section \ref{vcgPredicate}. For Symbolic Execution, the first problem is handled in section \ref{shr}, the second and third in section \ref{qpp}. The fourth and fifth question is answered  in section \ref{qppVals}.
 
 \subsection{Verification Condition Generation for Quantified Predicate Permissions}
-In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. An predicate location is  of the predicate \textit{pred} with n arguments is represented as \textit{Mask}\([null, pred(arg_1, \dots, arg_n)]\). . Similarly for the approach for quantified predicate permissions, we do not need to change anything in the current implementation, only extend it with a translation for inhaling and exhaling quantified predicate permissions. To translate a quantified predicate permission, we can reuse the solution presented for quantified fields, replacing the field locations with predicate locations. Additionally, we replace the neutral field location \(r\) with a set of stand-in arguments.
+\label{vcgPredicate}
+%values: modeling the state does not involve any changes, same as checking a permission in a state.
+In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. A predicate location of the predicate \textit{pred} with n arguments is represented as \textit{Mask}\([null, pred(arg_1, \dots, arg_n)]\). Similar to the approach for quantified predicate permissions, we introduce a translation for inhaling and exhaling quantified predicate permissions. There are no adaptions done for the program state, nor do we need to change anything concerning the way permissions are evaluated. The implementation of the operations unfold, fold and unfolding does not have to be changed. Framing is done as for quantified field permissions by defining a new Mask for the permission updates, for which we define the unchanged and changed permissions for all fields, predicate and masks.
 
-%representation
+To translate a quantified predicate permission, we reuse the solution presented for quantified fields. Same as for quantified field permissions, we evaluate the arguments, introduce an inverse function, assume injectivity and define the updated permissons for the newly created map holding the permissions for predicates. We need, however to redefine the definition of the inverse function and injectivity.
 
-Carbon, in contrast to Silicon, models the heap using Masks. The implementation for quantified fields is based on translating the statement and its properties into a number of forall expressions in Boogie. Quantified field chunks are not defined.
+A predicate location is defined by its predicate name and its set of arguments. Again, we wish to define the updates for the set of predicate instances using a neutral location. Whereas the approach for quantified field permission uses a fix reference \(r\) for all quantifiers, the type and number of arguments may differ for each predicate. To express a neutral location of a predicate \textit{pred}, we also need to declare a set of neutral arguments\(arg_1, \dots, arg_n\). 
 
-Apart from inhaling and exhaling quantified field permissions, there are no changes in the translation. There is no adaption that need to be done for reading or writing a field.
+In order to translate the given permission for that location, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to get from a general location to the variable used in the original quantified permission expression. A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not necessary to include it as an argument of the inverse function. The adapted definition of the inverse function is only depending on the arguments themselves.
 
-%carbon inhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\hline
-\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
-\ident \textit{/* Inverse Assumptions */} \\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
-\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
-\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
-\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\\
-\ident Let  \(v\)  be a fresh value map \\
-\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
-\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
-\ident \textbf{return} \( (h_1, \pi_6) \) \\
-\}\\ \hline
-\}\\ \hline
-\end{tabularx}
-\caption[Unfold  a Quantified Predicate Permission]
-   {Symbolic execution rules for the fold operation} %expand description: check, remove....
-\label{qUnfold}
-\end{figure}
-
-\subsubsection{exhale}
-
-\begin{itemize}
-\item Inverse Assumptions
-\item non null assumption
-\item permission nonnegative for all fields
-\item assume injectiivty
-\item define permission
-\item independent locations
-\end{itemize}
-
-\subsubsection{inhale}
-
-%carbon inhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
-\ident \textit{/* Inverse Assumptions */} \\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
-\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
-\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
-\ident \textbf{assume } \( \forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
-\\
-\ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
-\\
-\ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \((perm(pred(a_1, \dots, a_n))) \)\\
-\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{tr\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
-\}\\ \hline
-\end{tabularx}
-\caption[carbon quantified predicate inhale]
-   {Translating quantified predicate inhale operation} %expand description: check, remove....
-\label{qpcInhale}
-\end{figure}
-
-
-%carbon exhale quantified field
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
-\ident \textit{/*wild card assumptions */} \\
-\\
-\ident \textit{/* permission positive */} \\
-\\
-\ident \textit{/* Injectivity Assertion */} \\
-\ident \textbf{assert\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1, y_2\ \{pred(e_1(y_1), \dots, e_n(y_1)), pred(e_1(y_2), \dots, e_n(y_2))\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \land ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \) \\
-\ident \ident \ident \ident \( \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2)) \Rightarrow y_1 = y_2\) \\
-\\
-\ident \textit{/* sufficient permission assertion*/} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\} c(inv(a_1, \dots, a_n)) \Rightarrow perm(pred(a_1, \dots, a_n)) = \) \textbf{old} \(( perm(pred(a_1, \dots, a_n)))  + p(inv(a_1, \dots, a_n))\)\\
-\\
-\ident \textit{/* define updated permission */} \\
-\\
-\ident \textit{/* define independent permissions */} \\
-\}\\ \hline
-\end{tabularx}
-\caption[carbon quantified predicate exhale]
-   {Translating quantified predicate exhale operation} %expand description: check, remove....
-\label{qpcExhale}
-\end{figure}
-
-\subsection{Symbolic Heap Representation} \label{shr}
-In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. In the previous design, the quantified field heap chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
-For quantified predicate chunk we use the predicate instead of the field as identification, where we use a set of general arguments to express permission and values. The general form of such a heap chunk conforms to:
-\begin{equation}
-	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [v(\mathrm{arg_1, ..., arg_n}), p(\mathrm{arg_1, ..., arg_n}))],
-\end{equation}
-where \textit{v} represents a value map, where the values represent the snapshot of a predicate instantiation.
-
-In order to translate the given permission to that form, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to get from a general location to the variable used in the original quantified permission expression. For a field, that location was expressed by the neutral location \(r\). For predicates, the general location is expressed by the predicate name and its arguments, \textit{pred}\((arg_1, \dots, arg_n)\). As soon as a single argument of two predicate location differs, it is not the same location.
-A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not needed to define the inverse function. The adapted definition of the inverse function is only depending on the arguments themselves.
-
-As before the new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier given the arguments of the predicate. The adapted inverse function is defined as:\\
+As before, given the arguments of the predicate, the new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier. The adapted inverse function is defined as:\\
 
 \begin{tabularx}{1\textwidth}{ X}
-\textbf{function }\(inv(a_1:A_1, \dots, a_n:A_n): T\) \\
+\textbf{function }\(e^{-1}(a_1:A_1, \dots, a_n:A_n): T\) \\
 \(\forall \ x:T :: c(x) \Rightarrow inv(e_1 (x),…,e_n (x))==x \) \\
-\( \forall \ a_1:A_1,\dots, a_n:A_n ::  c(inv(a_1, …,a_n )) \Rightarrow e_i (inv(a_1,\dots, a_n )) = a_i \) \\
+\( \forall \ a_1:A_1,\dots, a_n:A_n ::  c(e^{-1}(a_1, …,a_n )) \Rightarrow e_i (inv(a_1,\dots, a_n )) = a_i \) \\
 \end{tabularx}\\
 
-The inverse function is, as before, a partial function defined only for the values where the condition of the original quantifier applies. For these cases, the inverse of the arguments defined by the argument expressions should be equal to the original value of the quantifier. Starting from arbitrary arguments, given that the inverse of these arguments satisfies the condition, each argument should be equal to its argument expression if evaluated with the inverse of all arguments.
+The inverse function is, as before, a partial function defined only for the values where the condition of the original quantifier applies.
 
-Similar as for quantified field permissions, we have to restrict the allowed expression terms as a result to guarantee the existence of the defined inverse function. The location expressed by the quantifier has to be injective. Since the predicate name remains unchanged, this is guaranteed as long as at least one argument expression is guaranteed to be unequal for two locations of the quantifier. This property can be expressed by the following equation:\\
+Similar to quantified field permissions, we have to restrict the allowed expression terms as a result to guarantee the existence of the defined inverse function. The location expressed by the quantifier has to be injective. Since the predicate name remains unchanged, this is guaranteed as long as at least one argument expression is guaranteed to be unequal for two locations of the quantifier. This property can be expressed by the following equation:\\
 
 \begin{tabularx}{1\textwidth}{ X}
  \(\forall x_1:T, x_2: T :: c(x_1) \land c(x_2) \land (e_1(x_1) = e_1(x_2)) \land \dots \land  (e_n(x_1) = e_n(x_2)) \Rightarrow \) \\
 \ident \ident \ident \ident \(x_1 = x_2\) \\
 \end{tabularx}\\
 
-\subsection{Treatment of Permissions}
+The adapted translations of inhaling and exhaling quantified predicate permissions are depicted in table \ref{qpcInhale} and table \ref{qpcExhale}.
+
+%%carbon inhale quantified field
+%\begin{figure}[h]
+%  \centering
+%\begin{longtable}{| p{1\textwidth} |}
+%\hline
+%\hline
+%\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
+%\ident \textit{/* Inverse Assumptions */} \\
+%\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
+%\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+%\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+%\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+%\\
+%\ident Let  \(v\)  be a fresh value map \\
+%\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
+%\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
+%\ident \textbf{return} \( (h_1, \pi_6) \) \\
+%\}\\ \hline
+%\}\\ \hline
+%\end{longtable}
+%\caption[Unfold  a Quantified Predicate Permission]
+%   {Symbolic execution rules for the fold operation} %expand description: check, remove....
+%\label{qUnfold}
+%\end{figure}
+
+%carbon missing: triggers
+\begin{longtable}{| p{1\textwidth} |}
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textbf{havoc} qpMask \\
+\ident \underline{c} \(:= eval(c)\)\\
+\ident \(\underline{e_1} := eval(e_1)\)\\
+\ident \([\dots]\) \\
+\ident \(\underline{e_n} := eval(e_n)\)\\
+\ident \underline{p} \(:= eval(p)\)\\
+\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(A_1, \dots, A_n \rightarrow T\) \\
+\ident \textbf{assume } \( \forall x:T :: \{\} \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1:T, y_2:T\ \{\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{qpMask[null, pred(a_1, \dots, a_n)\}\) \\
+\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)]  +  p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)] \)\\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{qpMask[o, f]\} \{Mask[o, f]\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\ident Mask \(:=\) qpMask \\
+\}\\ \hline
+\caption[carbon quantified predicate inhale]
+   {Translating quantified predicate inhale operation. The corresponding translation for quantified field permissions are displayed in table \ref{qfconditionInhale}. The translation differs in the definition of the neutral location, the inverse function and the injectivity assumption. Additionally, there is no need for a non-null assumptions for predicates. The independent locations include all instances not satisfying the condition \(c(x)\), as well as  all mask entries not pointing to a predicate instance of \(pred\). To distinguish predicates by the predicate name, we introduce the function \textit{predicateId}, which is unique for each predicate name and generated on declaration.}
+\label{qpcInhale}
+\end{longtable}
+
+%carbon exhale quantified field
+\begin{longtable}{| p{1\textwidth} |}
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
+\ident \textbf{havoc} qpMask \\
+\ident \underline{c} \(:= eval(c)\)\\
+\ident \(\underline{e_1} := eval(e_1)\)\\
+\ident \([\dots]\) \\
+\ident \(\underline{e_n} := eval(e_n)\)\\
+\ident \underline{p} \(:= eval(p)\)\\
+\\
+\ident \textit{/* Injectivity Assumption */} \\
+\ident \textbf{assume\ }\(\forall y_1:T, y_2:T\ \{\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
+\\
+\ident \textit{/* sufficient permission assertion*/} \\
+\ident \textbf{assume\ } \(\forall x:T :: \{\} c(x) \Rightarrow Mask[null, pred(\underline{e_1}(x), \dots, \underline{e_n}(x))]  \geq \underline{p}(x)\)\\
+\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \(A_1, \dots, A_n \rightarrow T\) \\
+\ident \textbf{assume } \( \forall x:T :: \{\} \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{qpMask[null, pred(a_1, \dots, a_n)\}\) \\
+\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)]  -  p(inv(a_1, \dots, a_n))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)] \)\\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{qpMask[o, f]\} \{Mask[o, f]\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\ident Mask \(:=\) qpMask \\
+\}\\ \hline
+\caption[carbon quantified predicate exhale]
+   {Translating quantified predicate exhale operation.The corresponding translation for quantified field permissions are displayed in table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the neutral location and the inverse function.}
+\label{qpcExhale}
+\end{longtable}
+
+\subsection{Symbolic Execution}
+In this section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution.
+
+\subsubsection{Symbolic Heap Representation} \label{shr}
+In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicates simultaneously. In the previous design, the quantified field heap chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
+For quantified predicate chunks we use the predicate name instead of the field as a chunk's identification. We use a set of general arguments to express the permission and value definition of the quantified chunk. The general form of such a heap chunk conforms to:
+\begin{equation}
+	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [v(\mathrm{arg_1, ..., arg_n}), p(\mathrm{arg_1, ..., arg_n}))],
+\end{equation}
+where \textit{v} represents a value map, where a value represent the snapshot of that predicate instantiation.
 Given the new definition of quantified predicate heap chunks, we need redefine the \(inhale\) and \(exhale\) operations for quantified predicate permissions.
 
 \subsubsection{Inhaling}
