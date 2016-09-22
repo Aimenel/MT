@@ -741,9 +741,8 @@ The inverse function is introduced analogous to a quantified field permission an
 
 As a last step we introduce a value map, which is later used to keep track of the snapshot of predicate instantiations. These values are used during an unfold or unfolding. On introduction, all snapshots are unknown.
 
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{inhale}\(\ (h_0, \pi_0,  \)  \textbf{forall } \(x:T :: c(x) \Rightarrow \)  \textbf{acc} (\textit{pred}  \( (e_1 (x),…,e_n (x)), p(x)) \)  \{\\
 \ident \textit{/* Symbolically evaluate source-level expressions */} \\
@@ -768,11 +767,10 @@ As a last step we introduce a value map, which is later used to keep track of th
 \ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
-\end{tabularx}
 \caption[Inhaling a Quantified Predicate Permission]
    {Symbolic execution rules for inhaling a quantified predicate permission. They refer to the rules for inhaling quantified field permissions as in figure \ref{qfInhale}. The declaration of the inverse function is updated as described before. The inverse function takes a set of predicate arguments and returns the value of the variable originally expressed in the quantifier. The type of the value map corresponds to the snapshot type of the predicate.}
 \label{qpInhale}
-\end{figure}
+\end{longtable}
 
 \subsubsection{Quantified Exhaling}
 The adaptations necessary for exhaling quantified predicate permissions again include an update for evaluating the argument expressions, as well as the introduction of the inverse function as defined for inhaling. Additionally, the injectivity check needs to be adapted as defined in the previous section. The new rules are defined in figure \ref{qpExhale}.
@@ -782,9 +780,7 @@ After evaluating the expressions denoted by the quantified predicate permission,
 The definition of removing a permission amount from a quantified expression does not need to be changed except for the filtering of the quantified chunks. After that, we again iterate through these chunks, taking permission greedily. If there is not enough permission available, we raise. The updated definition can be seen in figure \ref{qpRemove}.
 
 %exhale
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{exhale}\(\ (h_0, \pi_0, \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x))\) \{\\
 \ident Let y be a fresh symbolic constant of type\( \ T\) \\
@@ -802,16 +798,13 @@ The definition of removing a permission amount from a quantified expression does
 \ident \ident \ident  \( \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0))  \) \\
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
-\end{tabularx}
 \caption[Exhaling a Quantified Predicate Permission]
    {Symbolic execution rules for exhaling a quantified predicate permission.} %expand description: check, remove....
 \label{qpExhale}
-\end{figure}
+\end{longtable}
 
 %remove
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{remove}\(\ (h_0, \pi_0, f, g) \) \{\\
 \ident Let \(h_{pred} \subseteq h_0\) be all chunks in given state for predicate \(pred\) \\
@@ -833,14 +826,13 @@ The definition of removing a permission amount from a quantified expression does
 \ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(a_1, \dots, a_n) = 0 \) \\
 \ident \textbf{return} \( (h_1 \backslash h_{pred})  \cup h'_{pred} \) \\
 \}\\ \hline
-\end{tabularx}
 \caption[Remove a Quantified Predicate Permission]
    {Symbolic execution rules for removing a quantified predicate permission. Eval. Check...}
 \label{qpRemove}
-\end{figure}
+\end{longtable}
 
 \subsubsection{Inhaling and Exhaling Single Predicate Permission}
-In order to use the remove function defined, we again need to adapt the approach for inhaling and exhaling unquantified predicate permissions.
+In order to use the remove function defined, we again need to adapt the approach for inhaling and exhaling unquantified predicate permissions. When inhaling, we define a quantified predicate chunk, where the permission is defined as 
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -876,16 +868,12 @@ In order to use the remove function defined, we again need to adapt the approach
 \label{sqpExhale}
 \end{longtable}
 
-\subsection{Treatment of Symbolic Values} \label{qppVals}
-Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. 
-
-
-Unfolding a predicate
+\subsubsection{Treatment of Symbolic Values} \label{qppVals}
+Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. Unfolding a predicate can be desugared as before.
 
 %summarise
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{summarise}\(\ (h_0, pred) \) \{\\
 \ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for predicate \(pred\) \\
@@ -899,10 +887,9 @@ Unfolding a predicate
 \ident \ident \(perm := \lambda a_1, \dots, a_n \cdots (perm(a_1, \dots, a_n) + q_i(a_1, \dots, a_n)) \) \\
 \ident \textbf{return} \((v, def, perm)\) \\
 \}\\ \hline
-\end{tabularx}
 \caption[Summarise Quantified Field Permissions]
    {Symbolic execution rules for summarsing quantified predicate permissions. Eval. Check...}
-\end{figure}
+\end{longtable}
 
 %overview
 \subsubsection{Fold} 
@@ -914,9 +901,7 @@ Inhaling the predicate provides a new predicate chunk, where the value map holds
 
 The exact operations can be seen in figure \ref{qFold}.
 %fold
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{fold}\(\ (h_0, \pi_0, pred(e_1, \dots, e_n))\) \{\\
 \ident \textit{/* evaluate arguments */} \\
@@ -931,11 +916,10 @@ The exact operations can be seen in figure \ref{qFold}.
 \ident \textbf{var } \((h_2, \pi_{n+2}) :=\) inhale\((h_1, \pi_{n+1}, pred(e_1, \dots, e_n)\) \\
 \ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
 \}\\ \hline
-\end{tabularx}
 \caption[Unfold  a Quantified Predicate Permission]
    {Symbolic execution rules for folding a quantified predicate} %expand description: check, remove....
 \label{qFold}
-\end{figure}
+\end{longtable}
 
 \subsubsection{Unfold} 
 \label{qUnfold}
@@ -943,35 +927,34 @@ Unfolding a predicate corresponds to evaluating the predicate snapshot, exhaling
 
 
 %unfold
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
+\begin{longtable}{| p{1\textwidth} | } 
 \hline
 \textbf{unfold}\(\ (h_0, \pi_0, pred(e_1, \dots, e_n))\) \{\\
 \ident \textit{/* evaluate arguments */} \\
-\ident \( \mathbf{var\ } (\pi_{2_1},\underline{e_1}) := eval(h_0, \pi_0, e_1)) \)\\
+\ident \( \mathbf{var\ } (\pi_{1},\underline{e_1}) := eval(h_0, \pi_0, e_1)) \)\\
 \ident [\dots] \\
-\ident \( \mathbf{var\ } (\pi_{2_n},\underline{e_n}) := eval(h_0, \pi_0, e_n)) \)\\
+\ident \( \mathbf{var\ } (\pi_{n},\underline{e_n}) := eval(h_0, \pi_0, e_n)) \)\\
 \\
 \ident \textit{/* read the predicate's snap value */} \\
 \ident \textbf{var } \((v, \) \textit{def}, \textit{perm}\() :=\) \textit{summarise} \((h_0, pred)\) \\
 \ident \textbf{var } snapshot \(:=\) \( v (\underline{e_1}, \dots, \underline{e_n})\)\\
 \\
-\ident \textbf{var } \((h_1, \pi_{n+1}) :=\) exhale\((h_0, \pi_n, pred(e_1, \dots, e_n)\) \\
+\ident \textbf{var } \((h_1, \pi_{n+1}) :=\) exhale\((h_0, \pi_n \cup def, pred(e_1, \dots, e_n))\) \\
 \ident \textbf{var } \((h_2, \pi_{n+2}) :=\) inhale\((h_1, \pi_{n+1}, snapshot)\) \\
 \ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
 \}\\ \hline
-\end{tabularx}
 \caption[Unfold  a Quantified Predicate Permission]
    {Symbolic execution rules for the fold operation} %expand description: check, remove....
 \label{qUnfold}
-\end{figure}
+\end{longtable}
 
-\subsection{Unfolding}
+\subsubsection{Unfolding}
 Unfolding is desugared as before, by using the unfold definition of  \ref{qUnfold} on the predicate, evaluating the expression e and finally folding the predicate as described in \ref{qFold}.
 
+Bugs in Silicon.
+
 %silicon
-\subsection{Silicon}
+\subsubsection{Silicon}
 %general introduction.
 
 %precomputing 
