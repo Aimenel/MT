@@ -732,7 +732,7 @@ For quantified predicate chunks we use the predicate name instead of the field a
 where \textit{v} represents a value map, where a value represent the snapshot of that predicate instantiation.
 Given the new definition of quantified predicate heap chunks, we need redefine the \(inhale\) and \(exhale\) operations for quantified predicate permissions.
 
-\subsubsection{Inhaling}
+\subsubsection{Quantified Inhaling}
 The adapted symbolic execution rules for a inhaling a quantified permission can be seen in figure \ref{qpInhale}. It differs in the definition of the inverse function, as well as the values of the value map.
 
 As before, inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition. Similarly the quantified field expression, the condition, argument expressions and permission expression are evaluated as a first step.
@@ -774,7 +774,7 @@ As a last step we introduce a value map, which is later used to keep track of th
 \label{qpInhale}
 \end{figure}
 
-\subsubsection{Exhaling}
+\subsubsection{Quantified Exhaling}
 The adaptations necessary for exhaling quantified predicate permissions again include an update for evaluating the argument expressions, as well as the introduction of the inverse function as defined for inhaling. Additionally, the injectivity check needs to be adapted as defined in the previous section. The new rules are defined in figure \ref{qpExhale}.
 
 After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity before introducing the inverse functions as defined in the inhaling. The check passes if for any two variables satisfying the initial condition,  at least one argument expression is evaluated to a different symbolic value.
@@ -803,7 +803,7 @@ The definition of removing a permission amount from a quantified expression does
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \end{tabularx}
-\caption[Exhaling a Quantified Field Permission]
+\caption[Exhaling a Quantified Predicate Permission]
    {Symbolic execution rules for exhaling a quantified predicate permission.} %expand description: check, remove....
 \label{qpExhale}
 \end{figure}
@@ -838,6 +838,43 @@ The definition of removing a permission amount from a quantified expression does
    {Symbolic execution rules for removing a quantified predicate permission. Eval. Check...}
 \label{qpRemove}
 \end{figure}
+
+\subsubsection{Inhaling and Exhaling Single Predicate Permission}
+In order to use the remove function defined, we again need to adapt the approach for inhaling and exhaling unquantified predicate permissions.
+
+\begin{longtable}{| p{1\textwidth} | } 
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  acc(pred(a_1, \dots, a_n), p)\) \{\\
+\ident \textit{/* Symbolically evaluate source-level expressions */} \\
+\ident \( \mathbf{var\ } (\pi_{1},\underline{e_1}(y)) := eval(h_0, \pi_0 \cup \{ \) \underline{c}\( (y)\}, e_{1})) \)\\
+\ident [\dots] \\
+\ident \( \mathbf{var\ } (\pi_{n},\underline{e_n}(y)) := eval(h_0, \pi_{n-1}, e_{n})) \)\\
+\ident \( \mathbf{var\ } (\pi_{n+1},\underline{p}) := eval(h_0, \pi_n, p) \)\\
+\\
+\ident Let  \(v\)  be a fresh value map \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
+\ident \ident \ident  \([v(a_1, \dots, a_n), ((a_1 == \underline{e}_1) \ \&\&\ \dots \ \&\&\ (a_n == \underline{e}_n)) ? \ \underline{p} : 0] \}  \) \\
+\ident \textbf{return} \( (h_1, \pi_{n+1}) \) \\
+\}\\ \hline
+\caption[Inhaling a single Quantified Field Permission]
+   {The symbolic execution rules for inhaling a field permission, where the field is quantified at some point during the program, is adapted in order to represent all permission to a quantified field as quantified chunks.}
+\label{sqpInhale}
+\end{longtable}
+
+\begin{longtable}{| p{1\textwidth} | } 
+\hline
+\textbf{exhale}\(\ (h_0, \pi_0,  acc(e.f, p)\) \{\\
+\ident \textit{/* Evaluate Arguments (as above) */}\\
+\ident [\dots] \\
+\\\
+\ident \textit{/* Remove Permissions */}\\
+\ident \( \mathbf{var\ } h_1 :=  remove(h_0, \pi_{n+1}, f, (\lambda a_1, \dots, a_n \cdot ((a_1 == \underline{e}_1) \ \&\&\ \dots \ \&\&\ (a_n == \underline{e}_n))\ ?\ \underline{p} : 0))  \) \\
+\ident \textbf{return} \( (h_1, \pi_{n+1}) \) \\
+\}\\ \hline
+\caption[Exhaling a Field Permission]
+   {Analogous for inhaling a field permission, the symbolic execution rules for exhaling a field permission are adapted, if the field is quantified at some point during the program.}
+\label{sqpExhale}
+\end{longtable}
 
 \subsection{Treatment of Symbolic Values} \label{qppVals}
 Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. 
