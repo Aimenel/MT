@@ -969,47 +969,41 @@ As for symblolic execution rules, the same principle applies.%Go on?
 Viper currently does not allow to merge pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by repeating the definitions prior to the quantified expression.
 To decrease the code size for specifying the properties desired and support user-friendliness it would however be desirable to lift this restriction.
 
-We consider adding the support of the following expressions:
-\begin{equation}
-\label{eq1}
-	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))
-\end{equation}
-\begin{equation}
-\label{eq2}
-	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
-\end{equation}
-where {\it trs} is a set of triggers and {\it c(x)} a Boolean expression. The expression {\it e(x)} can be either pure or permission-based. In the second case it should be either of the expressions which were already supported before - a field permission, predicate permission or magic wand permission - or combination of these expressions. For the first newly introduced quantified expression, the sub-expressions \(e_1(x))\) and \(e_2(x)\) have to be injective, as should be \( e(x)\) in the second equation.
+We consider to the support of the following expressions:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: \{trs\}\  Exp\),\\
+\ident \( Exp := b\)  \\
+\ident \ident \(|\ acc(e.f, p)\) \\
+\ident \ident \(|\ acc(pred(arg_1, \dots, arg_n), p)\) \\
+\ident \ident \(|\ A \wand B\) \\
+\ident \ident \(|\ Exp_1 \ \&\&\ Exp_2\) \\
+\ident \ident \(|\ b \Rightarrow Exp\), \\
+\label{combinations}
+\end{longtable}
+where {\it trs} is a set of triggers and \(b\) a pure expression. The last two expressions allow us to combine pure and quantified expressions. For example, the following expression  is allowed: 
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: x\ in\ xs \Rightarrow (i > 0 \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (i <= 0 \Rightarrow acc(x.g)) \) \\
+\end{longtable}
 
-The first expression allows to combine two expressions on the right-hand side of the implication. The second expression  grants us the ability to refine a condition. Both are currently only allowed if they are entirely pure. An example using this new feature would be: 
+Other combinations using Boolean expressions are currently not considered unless they are part of a Boolean expression. This is due to the fact, that Viper does not supported them permission-based expressions as well. Combinations of pure quantifiers are already supported in Viper, as are quantified fields. The approaches for quantified predicates and magic wands are treated using the approaches defined as before. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case. In order to support the combinations defined above, we add three rewriting rules explained in the following sections.
 
-\begin{lstlisting}
-field f: Int
-field g: Int
+If a quantified condition does not include any condition, the formula is rewritten to the form:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: true \Rightarrow Exp\) \\
+\end{longtable}
 
-method m1(r:Ref, xs: Seq[Ref], b:Int)
-requires forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
-ensures forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
-ensures b? (x.f == 2) : (x.g == 3)
-{
-    if (b)
-    {
-        x.f := 2
-    }
-    else
-    {
-        x.g := 3
-    }
-}
-\end{lstlisting}
-
-Other combinations using Boolean expressions are currently not considered unless they are part of a Boolean expression. This is due to the fact, that Viper does not supported them permission-based expressions as well.
+In order to illustrate some of the challenges supporting these new expression, we discuss the following example:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall}  \(x:Ref :: acc(x.f) \&\& (i > 0 \Rightarrow (x.f = i)))\)\\
+\end{longtable}
+%dependency
 
 \subsection{Conjunction}
 As a first solution we propose to adapt the symbolic execution rules to handle these cases.
 If the entire expression is fully pure, this is handled as previously.The sub-expressions of the combinations may be depending on each other. An example for this would be: 
 \begin{equation}
 \label{eq1}
-	\mathbf{forall} \; x:T :: \{\}\  x\ \mathrm{in \ Set} \{\dots\} \Rightarrow acc(x.f) \ \&\& \ (x.f > 0)
+	\mathbf{forall} \; x:Ref :: \{\}\  x\ \mathrm{in \ Set} \{\dots\} \Rightarrow acc(x.f) \ \&\& \ (x.f > 0)
 \end{equation}
 As a consequence, both expressions have to be evaluated sequentially. 
 Let's consider the case where both subexpressions denote a field permission. Due to the sequentiality constraint, we treat the first expression as before. We cannot generally reuse the inverse function and injectivity definition for the second expression as defined before. A adaption to the rules would therefore skip the evaluation of the condition, but essentially repeat all other steps for the second expression.
