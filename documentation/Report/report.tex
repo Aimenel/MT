@@ -987,23 +987,23 @@ where {\it trs} is an optional set of triggers and \(b\) a pure expression. The 
 
 Other combinations of quantified expressions, such as \(acc(x.f) \Rightarrow (x.f == i)\) or \(acc(x.f) || acc(x.g)\),  are not included, since they are not permitted for the unquantified expressions. Combinations of pure quantifiers are already supported in Viper, as are quantified fields. The approaches for quantified predicates and magic wands are treated using the ones defined previously.
 
-Besides allowing combinations of quantifiers, we also lift the restriction of having to add a condition. If no condition is defined, the forall expression is rewritten to the following form:
+Besides allowing combinations of quantifiers, we also lift the restriction of having to define a condition in a permission-based quantifier. If no condition is defined, the forall expression is rewritten to the following form:
 \begin{longtable}{ p{1\textwidth} } 
 \textbf{forall} \(x:T :: true \Rightarrow Exp\) \\
 \end{longtable}
 
-For some cases this is however not desirable. If x is of type \textit{Ref}, Carbon includes the null reference in the set of all references, which leads to an inconsistent state when inhaling the access rights to all references due to the non-null assumption.
+For some cases this is however undesirable. If x is of type \textit{Ref}, Carbon includes the null reference in the set of all references, which leads to an inconsistent state when inhaling the access rights to all references due to the non-null assumption.
 
 In order to support the combinations defined above, we add two rewriting rules explained in the following sections. In order to illustrate some of the challenges supporting these new expression, we discuss the following example:
 \begin{longtable}{ p{1\textwidth} } 
-\textbf{forall} \(x:Ref :: (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x))) \) \\
+inhale \textbf{forall} \(x:Ref :: (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x))) \) \\
 \end{longtable}
 
-The sub-expressions of the combinations may depend on each other, which enforces that \(acc(x.f)\) needs to be inhaled or exhaled before accessing the field \(x.f\).
-%dependency
-Let's consider the case where both subexpressions denote a field permission. Due to the sequentiality constraint, we treat the first expression as before. We cannot generally reuse the inverse function and injectivity definition for the second expression as defined before. A adaption to the rules would therefore skip the evaluation of the condition, but essentially repeat all other steps for the second expression.
+If a reference \(x\) is within the set of references \(xs\), we inhale the access to the field location defined by that reference and gain the information that its value is equal to \(i\). If a reference is within the set \(ys\), we gain the access right to the predicate \(P(x)\). Please not, that we cannot assume the value of a field without holding partial permissions. The sub-expressions of the combinations may depend on each other, which enforces that \(acc(x.f)\) needs to be inhaled before accessing the field \(x.f\).
 
 When combining two quantifiers, the expressions may depend on the fact, that the first expression is evaluated before the second expression as for the example shown above. As a consequence, the conditions have to evaluated sequentially.
+
+Both solutions for supporting the given for the conjunction and refinement of quantifiers rely on desugaring the expressions to a logically equivalent form.
 
 \subsection{Rewriting Rules}
 Both the conjunction and implication used to combine quantified expressions can be supported by rewriting the quantified expression to a form already supported before. The rewriting takes place after adding a condition if it was omitted as described above.
@@ -1015,6 +1015,8 @@ If the expression on the right-hand side of the implication is pure or a permiss
 	\((\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x)) \ \&\&\  (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_2(x)) \)
 \end{longtable}
 
+Considering the case where both quantifiers are permission-based, it is necessary to define the inverse function and injectivity for both sub-expressions separately. The rewriting rule only results in a minor overhead, since the evaluation of the condition \(c(x)\) is done twice for both quantifiers. This could however be cached. 
+
 An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A \:\&\&\: B) \Rightarrow C\). Using this property, a refinement of a condition can be desugared using its logical equal, by adding the boolean expression to the condition.
 
 \begin{longtable}{ p{1\textwidth} } 
@@ -1022,7 +1024,7 @@ An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A
 	\(\mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x)) \)
 \end{longtable}
 
-The rewriting is described in table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
+The rewriting function is described in table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
 
 \begin{longtable}{| p{1\textwidth} |} 
 \hline
@@ -1044,10 +1046,6 @@ res := Exp match \{\\
 \label{rewrite}
 \end{longtable}
 
-If one of the expressions is pure, we treat it independently as before. %TODO: continue with inverse funcitons etc.
-
-As mentioned before, there is only a minimal advantage in adapting the symbolic rules due to the fact that the condition is evaluated multiple times. The value could also be cached. The triggers are passed along to both quantifiers.
-
 \subsection{Example}
 Let's consider the example mentioned at the beginning of the section. As a first step we add the condition to conform to the structure handled in quantified permissions:
 
@@ -1068,11 +1066,11 @@ We then proceed to rewrite the new expression according to the algorithm of tabl
 \ident (\textbf{forall} \(x:Ref :: true \ \&\&\ \ x\ in\ ys \Rightarrow acc(P(x))) \) \\
 \end{longtable}
 
-At the end of the rewriting, we translate the three forall expressions. 
+At the end of the rewriting, we translate the three forall expressions sequentially. 
 
 \subsection{Implementation}
 The implementation for supporting the combinations presented uses the rewriting rules mentioned above. 
-As a first implementation, the rewriting was done separately for Carbon and Silicon. This would have the advantage, that the rules could have been adapted at a later point if desired. We decided however, to move the rewriting to the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
+As a first implementation, the rewriting was done separately for Carbon and Silicon. This would have the advantage, that the rules could have been adapted at a later point if desired. We decided however to move the rewriting to the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
 
 %Nested Quantifiers
 \section{Nested Quantifiers}
