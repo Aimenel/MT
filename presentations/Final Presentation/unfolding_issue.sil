@@ -1,0 +1,16 @@
+//Carbon
+field f: Int
+
+predicate p2(r:Ref)
+{
+    acc(r.f) && r.f == 5
+}
+
+method m1(x1: Ref, x2:Ref)
+requires acc(p2(x1))
+requires acc(p2(x2))
+{
+	assert unfolding p2(x1) in r.f == 5
+    assert forall r:Ref :: r in Set(x1, x2) ==> unfolding p2(r) in r.f == 5
+}
+
