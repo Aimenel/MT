@@ -993,16 +993,16 @@ Besides allowing combinations of quantifiers, we also lift the restriction of ha
 \textbf{forall} \(x:T :: true \Rightarrow Exp\) \\
 \end{longtable}
 
-For some cases this is however undesirable. If x is of type \textit{Ref}, Carbon includes the null reference in the set of all references, which leads to an inconsistent state when inhaling the access rights to all references due to the non-null assumption.
+For some cases this is, however, undesirable. If \(x\) is of type \textit{Ref}, Carbon includes the null reference in the set of all references, which leads to an inconsistent state when inhaling the access rights to all references due to the non-null assumption.
 
-In order to support the combinations defined above, we add two rewriting rules explained in the following sections. In order to illustrate some of the challenges supporting these new expression, we discuss the following example:
+In order to support the combinations defined above, we add two rewriting rules explained in the following sections. In order to illustrate some of the challenges supporting these new expressions, we discuss the following example:
 \begin{longtable}{ p{1\textwidth} } 
 inhale \textbf{forall} \(x:Ref :: (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x))) \) \\
 \end{longtable}
 
-If a reference \(x\) is within the set of references \(xs\), we inhale the access to the field location defined by that reference and gain the information that its value is equal to \(i\). If a reference is within the set \(ys\), we gain the access right to the predicate \(P(x)\). Please not, that we cannot assume the value of a field without holding partial permissions. The sub-expressions of the combinations may depend on each other, which enforces that \(acc(x.f)\) needs to be inhaled before accessing the field \(x.f\).
+If a reference \(x\) is within the set of references \(xs\), we inhale the access to the field location defined by that reference and gain the information that its value is equal to \(i\). If a reference is within the set \(ys\), we gain the access right to the predicate \(P(x)\). Please note, that we cannot assume the value of a field without holding partial permissions. The sub-expressions of the combinations may depend on each other, which enforces that \(acc(x.f)\) needs to be inhaled before accessing the field \(x.f\).
 
-When combining two quantifiers, the expressions may depend on the fact, that the first expression is evaluated before the second expression as for the example shown above. As a consequence, the conditions have to evaluated sequentially.
+When combining two quantifiers, the expressions may depend on the fact that the first expression is evaluated before the second expression as for the example shown above. As a consequence, the conditions have to be evaluated sequentially.
 
 Both solutions for supporting the given for the conjunction and refinement of quantifiers rely on desugaring the expressions to a logically equivalent form.
 
@@ -1012,17 +1012,17 @@ Both the conjunction and implication used to combine quantified expressions can 
 If the expression on the right-hand side of the implication is pure or a permission already supported, no rewriting is necessary. We desugare the expression by duplicating the variable declaration and condition. The trigger is duplicated, and should be valid for both sub-expressions.
 
 \begin{longtable}{ p{1\textwidth} } 
-	\(\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x) \ \&\&\ e_2(x))  \mapsto\) \\
-	\((\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x)) \ \&\&\  (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_2(x)) \)
+	\(\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x) \ \&\&\ e_2(x)) \) \\
+	\(\longmapsto (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x)) \ \&\&\  (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_2(x)) \)
 \end{longtable}
 
 Considering the case where both quantifiers are permission-based, it is necessary to define the inverse function and injectivity for both sub-expressions separately. The rewriting rule only results in a minor overhead, since the evaluation of the condition \(c(x)\) is done twice for both quantifiers. This could however be cached. 
 
-An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A \:\&\&\: B) \Rightarrow C\). Using this property, a refinement of a condition can be desugared using its logical equal, by adding the boolean expression to the condition.
+An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A \:\&\&\: B) \Rightarrow C\). Using this property, a refinement of a condition can be desugared using its logical equal by adding the boolean expression to the condition.
 
 \begin{longtable}{ p{1\textwidth} } 
-	\(\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x))  \mapsto\) \\
-	\(\mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x)) \)
+	\(\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x))\) \\
+	\(\longmapsto \mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x)) \)
 \end{longtable}
 
 The rewriting function is described in table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
@@ -1058,11 +1058,11 @@ Let's consider the example mentioned at the beginning of the section. As a first
 We then proceed to rewrite the new expression according to the algorithm of table \ref{rewrite}:
 \begin{longtable}{ p{1\textwidth} } 
 \textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x)))\) \\
-\(\mapsto\) (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i))) \ \&\&\ \) \\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i))) \ \&\&\ \) \\
 \ident (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ ys \Rightarrow acc(P(x)))) \)\\
-\(\mapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ \) \\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ \) \\
 \ident  (\textbf{forall} \(x:Ref :: true \ \&\&\ \ x\ in\ ys \Rightarrow acc(P(x))) \) \\
-\(\mapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  acc(x.f)) \ \&\&\ \)\\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  acc(x.f)) \ \&\&\ \)\\
 \ident (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow x.f  = i) \ \&\&\ \) \\
 \ident (\textbf{forall} \(x:Ref :: true \ \&\&\ \ x\ in\ ys \Rightarrow acc(P(x))) \) \\
 \end{longtable}
@@ -1070,29 +1070,29 @@ We then proceed to rewrite the new expression according to the algorithm of tabl
 At the end of the rewriting, we translate the three forall expressions sequentially. 
 
 \subsection{Implementation}
-The implementation for supporting the combinations presented uses the rewriting rules mentioned above. As a first implementation, the rewriting was done separately for Carbon and Silicon. This would have the advantage, that the rules could have been adapted at a later point if desired. We decided however to move the rewriting to the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
+The implementation for supporting the combinations presented uses the rewriting rules mentioned above. As a first implementation, the rewriting was done separately for Carbon and Silicon. This would have permitted adapting the rules for one of the verifiers only at a later point if desired. We decided however to move the rewriting to the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
 
 %Nested Quantifiers
 \section{Nested Quantifiers}
-In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers which are desirable to support.
+In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers we decided to support.
 
-In the first structure, all variables are defined at once, allowing condition and expression to depend on all of them:\\
+In the first structure, all variables are defined upfront, allowing condition and expression to depend on all of them:\\
 
 \begin{tabularx}{1\textwidth}{ X }
 	\( \mathbf{forall} \; x_1:T_1, \dots, x_n: T_n ::  \{trs\}\ c(x_1, \dots, x_n) \Rightarrow \) \\
 	\(e(x_1,  \dots, x_n)\)
 \end{tabularx}\\
 
-The expression \(e(x_1,  \dots, x_n)\) stands for any unquantified permission where we presented a quantified solution in the previous chapters. Pure quantifiers of this form are already supported in Viper. For the support of this new quantified expression we present a new generalisation of the previously shown algorithms.\\
+The expression \(e(x_1,  \dots, x_n)\) stands for any unquantified permission previously included in quantified permissions. Pure quantifiers of this form are already supported in Viper. For the support of this new quantified expression we present a new generalisation of the previously shown algorithms.\\
 
-The second structure represents a truly nested quantifier, where a second quantified expression occurs on the right-hand side of the implication. The following formula represents such a form with two quantifiers:\\
+The second structure represents a truly nested quantifier, where a second forall expression occurs on the right-hand side of the implication. The following formula represents this form:\\
 
 \begin{tabularx}{1\textwidth}{ X}
       \(\mathbf{forall \ }  x_1:T_1, \dots x_n:T_n ::  \{trs_1\}\  c_1(x_1, \dots, x_n) \Rightarrow \) \\
      \( ( \mathbf{forall \ } x_{n+1}:T_{n+1} :: \{trs_2\} \ c_2(x_1, \dots, x_{n+1}) \Rightarrow e(x_1, \dots, x_{n+1}))\)
 \end{tabularx}\\
 
-Here the expression \(e(x_1, x_2)\) can, as mentioned before, be any permission expression introduced or another quantified expression. As a solution we present a new rewriting rule in section \ref{rewritesN}.
+Here, the expression \(e(x_1, x_2)\) can, be any permission expression introduced before or another quantified expression. In order to support these expressions, we present a new rewriting rule.
 
 Both formulas allow us to define more complex quantifiers, for example access rights to a matrix, without resorting to reformulate them. The set of allowed quantifier is extended to:
 \begin{longtable}{ p{1\textwidth} } 
@@ -1107,10 +1107,11 @@ Both formulas allow us to define more complex quantifiers, for example access ri
 \label{combinations}
 \end{longtable}
 
-To support these nested quantifiers, we need to adapt the presented solution for quantified field, predicate and magic wands. Additionally, we introduce a new rewriting rule for truly nested quantifiers.
+To support these nested quantifiers, we need to adapt the presented solution for quantified field, predicate and magic wands. How these approaches have to be adapted, is described in section \ref{multipleVars}. Additionally, we introduce a new rewriting rule for truly nested quantifiers  in section \ref{rewritesN}.
 
 \subsection{Multiple quantifier variables}
-For both verification condition generation and symbolic execution, the representation of the general location used to express the updated permission does not change. There is no need to change the definition of the symbolic heap chunks. The way to translate a quantifier to its neutral form, however, does. Again, we need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, each inverse function mapping from a general location to the value of one variable.
+\label{multipleVars}
+For both verification condition generation and symbolic execution, the representation of the general location used to express the updated permission does not change. There is no need to change the definition of the symbolic heap chunks. The translation of the quantifier to its neutral form, however, does. Again, we need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, each inverse function mapping from a general location to the value of one variable.
 
 In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T_i\) corresponding to the original value of the ith quantifier variable given the arguments defining the general location. The adapted inverse functions for quantified field and predicate permissions can be seen in figure \ref{nInv}.
 
@@ -1142,24 +1143,30 @@ Using these inverse functions also enforces us to restrict the allowed expressio
 \(\ \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n, y_1:T_1, \dots, y_n:T_n :: (x_1 != y_1 || \dots ||  x_n != y_n) \ \&\&\ c(x_1, 
 \dots, x_n) \ \&\&\ c(y_1, \dots, y_n) \Rightarrow (e_1(x_1, \dots, x_n) != e_1 (y_1, \dots, y_n) || \dots || e_n(x_1, \dots, x_n) != e_n (y_1, \dots, y_n)\) \\
 \\
-\caption[Nested Inverse Functions]
+\caption[Rewriting Rules for Nested Inverse Functions]
    {New injectivity definition for nested quantifiers.}
 \label{nInjectivity}
 \end{longtable}
 
-As an additional change to the approaches, any occurrence of the inverse function is replaced by a tuple of all inverse function defined. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in table \ref{qfnInhaleCond} and for symbolic execution in table \ref{qpnInhaleSyn}. Other approaches are adapted analogously for nested quantifiers, but are omitted here.
+As an additional change to the approaches, any occurrence of the inverse function is replaced by the tuple of all inverse function as defined above. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in table \ref{qfnInhaleCond} and for symbolic execution in table \ref{qpnInhaleSyn} (TODO). Other approaches are adapted analogously for nested quantifiers, but are omitted here.
  
-
-\subsection{Rewriting Rules for Nested Quantified Permissions}
+\subsection{Rewriting Nested Quantified Permissions}
 \label{rewritesN}
-If an expression is truly nested, we rewrite that expression to the newly established base cases by adding the new variables
+If an expression is truly nested, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does not change the expression, but allows us to reuse the approach mentioned above. The trigger of the rewritten epxression has to combine all combination of both trigger sets to include all variables. If at least one triggersets are omitted, the new trigger will be empty.
+
+The rewriting rules are displayed in table \ref{nRewriting}.
 
 \begin{longtable}{ p{1\textwidth} } 
       \(\mathbf{forall \ }  x_1:T_1, \dots x_n:T_n ::  \{trs_1\}\  c_1(x_1, \dots, x_n) \Rightarrow \) \\
-\ident \ident \ident     \( ( \mathbf{forall \ } y_1:T_{n+1}, \dots, y_m: T_{n+m}:: \{trs_2\} \ c_2(x_1, \dots, x_n, y_1, \dots, y_{m}) \Rightarrow e(x_1, \dots, x_n, y_1, \dots, y_{m}))\)
+\ident \ident \ident     \( ( \mathbf{forall \ } y_1:T_{n+1}, \dots, y_m: T_{n+m}:: \{trs_2\} \)\\
+\ident \ident \ident  \(c_2(x_1, \dots, x_n, y_1, \dots, y_{m}) \Rightarrow e(x_1, \dots, x_n, y_1, \dots, y_{m}))\)
 \\
 \( \longmapsto \mathbf{forall \ }  x_1:T_1, \dots x_n:T_{n}, y_1: T_{n+1}, \dots, y_m: T_{n+m} ::  \{trs_1 \times trs_2\}\ \) \\ 
-\ident \ident \ident \(( c_1(x_1, \dots, x_n) \:\&\&\:   \ c_2(x_1, \dots, x_n, y_1, \dots, y_m) )  \Rightarrow  e(x_1, \dots, x_n, y_1, \dots, y_m)) \) \\
+\ident \ident \ident \(( c_1(x_1, \dots, x_n) \:\&\&\:   \ c_2(x_1, \dots, x_n, y_1, \dots, y_m) )  \Rightarrow \) \\
+\ident \ident \ident  \(e(x_1, \dots, x_n, y_1, \dots, y_m)) \) \\
+\caption[Nested Inverse Functions]
+   {Additional Rewriting Rules in order to support forall expressions within quantifiers.}
+\label{nRewriting}
 \end{longtable}
 
 \section{Evaluation}
