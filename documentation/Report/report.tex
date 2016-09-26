@@ -1,11 +1,11 @@
 \title{\bf{Generalised Verification for Quantified Permissions}}
 \author{
-	\bf{Master Thesis Project Description} \\
+	\bf{Master Thesis} \\
         	Nadja M\"uller \\
 	\\
 	Supervised by Alexander Summers, Prof. Dr. Peter M\"uller\\
 	 Department of Computer Science \\
-	ETH Z\"urich \\
+	ETH Zurich \\
 }
 \date{\today}
 
@@ -53,19 +53,16 @@
 \clearpage
 \pagenumbering{arabic}% Arabic page numbers (and reset to 1)
 \section{Abstract}
-Viper supports a quantified field permission of the form \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\). The quantifier may only depend on one variable and express permissions to a set of fields. Viper includes of two verifiers. Carbon is based on verification condition generation, whereas Silicon is based symbolic execution. In this report, we present approaches for both types of verifiers to generalise the supported quantified permissions. These approaches adapt the algorithm presented for quantified field permissions to quantified predicate and magic wands permissions, as well as nested quantifiers. We also present rewriting rules for combining pure and permission-based quantifiers.
-We implemented both quantified predicate permissions and combinations of quantifiers in Carbon and Silicon.
+The verification infrastructure Viper supports a quantified field permission of the form \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\). The quantifier may only depend on one variable and express permissions to a set of fields. Viper includes two verifiers. Carbon is based on verification condition generation, Silicon on Smallfoot-style symbolic execution. In this report, we present approaches for both types of verifiers to generalise the support of quantified permissions. We present a solution to adapt the approaches for quantified field permissions to support quantified predicate and magic wands permissions, as well as nested quantifiers. We also present rewriting rules for combining pure and permission-based quantifiers.We implemented both quantified predicate permissions and combinations of quantifiers in Carbon and Silicon.
 
 \section{Introduction}
 %viper implementation?
 In order to verify heap-manipulating programs as shared mutable data structures, separation logic\cite{reynolds2002separation} and implicit frames\cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
 Dynamic data structures may depend on a potentially unbound set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be defined as a predicate, for example a random access pattern in an array.
 
-The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} presents a solution to define permissions to a set of unbound locations regardless of the access pattern. It generalises heap chunks to hold an unbound number of locations simultaneously and encode a symbolic value per location, as well as a solution how to remove and add permissions these heap chunks.
+The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} presented a solution to define permissions to a set of field locations regardless of the access pattern. It introduces a quantified heap chunk to hold the permissions and symbolic values for a set of fields simultaneously, as well as symbolic rules to evaluate specific values, remove and add permissions to quantified field chunks.
 
-This approach was implemented in the verification infrastructure viper \cite{viper}. It includes several front-ends which translate given programs to Viper's intermediate language. Verification runs on Silicon, which is based on symbolic execution, and Carbon, a verification condition generator.
-
-There are currently three features of Viper handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structure and quantified field permissions \cite{isc} allows us to express point-wise specifications. 
+The approach was implemented in the verification infrastructure Viper \cite{viper}. It includes several front-ends which translate the given programs to Viper's intermediate language. These programs can be verified with Silicon, which is based on symbolic execution, and Carbon, a verification condition generator. There are currently three features of Viper handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structures and quantified field permissions \cite{isc} allows us to express point-wise specifications. 
 
 This project presents the generalisation of that approach. Currently, the approach mentioned supports quantified permissions of the following structure:
 \begin{equation}
@@ -73,11 +70,11 @@ This project presents the generalisation of that approach. Currently, the approa
 \end{equation}
 where {\it f} is a field of any type, {\it c(x)} is  a Boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
 
-As a generalisation, we introduce an adaption of this solution to allow permissions to predicates\cite{predicates} and magic wands\cite{magicwand} instead of field permissions, as well as generalise the general form in order to allow nested quantifiers and combinations of pure and permission-based quantifiers.
+As a generalisation, we introduce new approaches adapting this solution to allow quantified permissions for predicates\cite{predicates} and magic wands\cite{magicwand} instead of fields, as well as  nested quantifiers. Further we present rewriting rules to get rid of the fix structure of quantified field permissions, allowing expressions not defining a condition \(c(x)\) and combinations of pure and permission-based quantifiers.
 
 \subsection{Outline}
 
-The next section presents an overview to Viper, including the approach integrated for quantified permissions. Section \ref{genField} presents some minor adaptions for the treatment of quantified field permissions, including the support of user-given triggers in Carbon. The adapted approach for quantified predicate permissions is introduced in section \ref{qp}.
+The following section presents an overview to Viper, including the approach integrated for quantified field permissions. Section \ref{genField} shows some minor changes for the treatment of quantified field permissions, including the support of user-given triggers in Carbon. The adapted approach for quantified predicate permissions is introduced in section \ref{qp}, the approach for quantified magic wand permissions in section \ref{qmw}. The rewriting rules for combinations of quantifiers are defined in section \ref{rewriting}. The adaption necessary to support nested quantifiers is described in section \ref{nq}. Finally, we evaluate the performance of the implementation of quantified predicates and combinations of predicates in section \ref{evaluation}. Additionally, the appendix holds a few examples of programs newly supported in Viper.
 
 %to be continued
 
@@ -179,7 +176,7 @@ A magic wand instance is stored using its so-called \textit{footprint}, which is
 As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
 
 \vbox{
-\begin{longtable}{ p{1\textwidth} } 
+\begin{longtable}{ p{0.99\textwidth} } 
 \( apply A \wand B \mapsto \) \\ 
 \ident \(exhale A \wand B \)\\
 \ident \(exhale A\)\\
@@ -683,7 +680,8 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \\
 \ident \textit{/* define updated permission */} \\
 \ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{qpMask[null, pred(a_1, \dots, a_n)\}\) \\
-\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)]  -  p(inv(a_1, \dots, a_n))\)\\
+\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] \) \\
+\( == Mask[null, pred(a_1, \dots, a_n)]  -  p(inv(a_1, \dots, a_n))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
 \ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)] \)\\
@@ -798,7 +796,8 @@ The definition of removing permission from a quantified predicate is adapted as 
 \ident \ident \(q_{needed} := (\lambda a_1, \dots, a_n \cdot q_{needed}(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n) \)\\
 \\
 \ident \ident \textit{/* Add an updated chunk to the processed chunks */} \\
-\ident \ident \( h'_{pred} := h'_{pred} \cup \{r.f \mapsto [v_i((a_1, \dots, a_n), (q_i(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n)] \} \)\\
+\ident \ident \( h'_{pred} := h'_{pred} \cup \{r.f \mapsto [v_i((a_1, \dots, a_n), (q_i(a_1, \dots, a_n) - \) \\ 
+\ident \ident \( q_{current}(a_1, \dots, a_n)] \} \)\\
 \\
 \ident \textit{/* Check that sufficient permissions were removed */} \\
 \ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(a_1, \dots, a_n) = 0 \) \\
@@ -944,6 +943,7 @@ Quantified unfolding
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
+\label{qmw}
 As mentioned in chapter , a magic wand is represented using its footprint. A footprint may consist of multiple arguments. As a consequence, the definition for the inverse function and the injectivity test is defined analgous to quantified predicate permissions.
 
 In verification condition generation, a magic wand instance is represented in the form wand\( (f_1, \dots, f_n) \), where \(f_i\) represents the ith argument of the magic wand's footprint. The definitions for inhaling and exhaling a quantified magic wand is done exaclty as in figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with wand, and the argument expressions correspond to the footprints.
@@ -1061,6 +1061,7 @@ The implementation for supporting the combinations presented uses the rewriting 
 
 %Nested Quantifiers
 \section{Nested Quantifiers}
+\label{nq}
 In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers we decided to support.
 
 In the first structure, all variables are defined upfront, allowing condition and expression to depend on all of them:\\
@@ -1157,9 +1158,36 @@ The rewriting rules are displayed in table \ref{nRewriting}.
 \end{longtable}
 
 \section{Evaluation}
-\section{Conclusion}
+\label{evaluation}
+In order to evaluate the performance of the support of quantified predicates and combinations in Viper, we ran a set of viper programs on Carbon and Silicon.
+
+%test files
+The first set of test file test the implementation of quantified predicates for different number of predicate arguments and snapshot size. qqpprod\_arity tests inhaling quantified predicate permissions, spprod\_arity inhaling single predicate permissions for quantified predicates. The same distinction is made for exhaling predicates. Additionally there is a test for the operations fold, unfold and unfolding.
+
+Generally speaking, Silicon verifies a bit faster than Carbon. Inhaling a single quantified predicate permission runs faster in Carbon, since it treats them same as a single unquantified predicate permission.
+
+As a second test set, we consider a bunch of small examples...
+
+The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 16GB RAM, running Windows 10 x64 with SSD. The measurements are shown in figure \ref{timings}. The measured time corresponds to the average of 10 runs, where . The startup time of JVM are not included. The standard-deviation for the test cases was negligible.
+
+\begin{longtable}{ | p{0.4\textwidth} | p{0.2\textwidth}| p{0.2\textwidth} | p{0.2\textwidth}|}
+\hline
+{\bf Program} & {\bf Size (LOC)} & {\bf Carbon}&  {\bf Silicon} \\ \hline
+test.sil & 10 & 0.5s & 0.4s \\
+\hline
+\caption[run-time measurements]
+   {TODO.}
+\label{timings}
+\end{longtable}
+
+\section{Conclusion an Future Work}
+This report generalised the suport of quantified field permissions, adapting the solutions implemented in Silicon and Carbon to support quantified predicate and magic wand permissions. Additionally we described the adaptions necessary to allow nested quantified permissions of all mentioned location types. To improve user-friendliness, we additionally provided four rewriting rules. These rules allow omitting a condition on declaration, the combination of pure and permission-based quantifiers as well as multiple nested forall statements. We implemented quantified predicate permissions and the rewriting rules for combinations in both of verifiers of Viper.
+
+As future work, the implementation could be extended to include quantified magic wands, as well as nested quantifiers. Additionally, the introduction of a forach statement would allow applying a certain operation for multiple elements, which would allow the unfolding of a set of predicates, improving the usability of quantified predicate permissions.
 
 \bibliographystyle{unsrt}
 \bibliography{report}
+\newpage
+\section{Appendix}
 
 \end{document}
