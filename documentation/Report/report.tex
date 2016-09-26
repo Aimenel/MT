@@ -953,264 +953,208 @@ As for symblolic execution rules, the same principle applies.%Go on?
 
 %Combinations of Quantifiers
 \section{Combinations of Quantifiers}
-Viper currently does not allow to merge pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by repeating the definitions prior to the quantified expression.
-To decrease the code size for specifying the properties desired and support user-friendliness it would however be desirable to lift this restriction.
+\label{rewriting}
+Viper currently does not allow merging pure and permission-based quantifiers, nor does it allow combinations of multiple quantified permissions. This can be circumvented by repeating the definitions prior to the quantified expression.
+To decrease the code size for specifying the properties desired and support user-friendliness, we present a solution to lift this restriction.
 
-We consider adding the support of the following expressions:
-\begin{equation}
-\label{eq1}
-	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))
-\end{equation}
-\begin{equation}
-\label{eq2}
-	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x)),
-\end{equation}
-where {\it trs} is a set of triggers and {\it c(x)} a Boolean expression. The expression {\it e(x)} can be either pure or permission-based. In the second case it should be either of the expressions which were already supported before - a field permission, predicate permission or magic wand permission - or combination of these expressions. For the first newly introduced quantified expression, the sub-expressions \(e_1(x))\) and \(e_2(x)\) have to be injective, as should be \( e(x)\) in the second equation.
+We extend the support of quantifiers to include the following expressions:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: \{trs\}\  Exp\),\\
+\ident \( Exp := b\)  \\
+\ident \ident \(|\ acc(e.f, p)\) \\
+\ident \ident \(|\ acc(P(arg_1, \dots, arg_n), p)\) \\
+\ident \ident \(|\ A \wand B\) \\
+\ident \ident \(|\ Exp_1 \ \&\&\ Exp_2\) \\
+\ident \ident \(|\ b \Rightarrow Exp\), \\
+\label{combinations}
+\end{longtable}
+where {\it trs} is an optional set of triggers and \(b\) a pure expression. The last two expressions allow us to combine quantified expressions of various types. For example, the following expression  is allowed: 
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: x\ in\ xs \Rightarrow (i > 0 \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (i <= 0 \Rightarrow acc(P(x))) \) \\
+\end{longtable}
 
-The first expression allows to combine two expressions on the right-hand side of the implication. The second expression  grants us the ability to refine a condition. Both are currently only allowed if they are entirely pure. An example using this new feature would be: 
+Other combinations of quantified expressions, such as \(acc(x.f) \Rightarrow (x.f == i)\) or \(acc(x.f) || acc(x.g)\),  are not included, since they are not permitted for the unquantified expressions. Combinations of pure quantifiers are already supported in Viper, as are quantified fields. The approaches for quantified predicates and magic wands are treated using the ones defined previously.
 
-\begin{lstlisting}
-field f: Int
-field g: Int
+Besides allowing combinations of quantifiers, we also lift the restriction of having to define a condition in a permission-based quantifier. If no condition is defined, the forall expression is rewritten to the following form:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:T :: true \Rightarrow Exp\) \\
+\end{longtable}
 
-method m1(r:Ref, xs: Seq[Ref], b:Int)
-requires forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
-ensures forall x:Ref :: x in xs ==> (b ==> acc(x.f)) && (!b ==> acc(x.g))
-ensures b? (x.f == 2) : (x.g == 3)
-{
-    if (b)
-    {
-        x.f := 2
-    }
-    else
-    {
-        x.g := 3
-    }
-}
-\end{lstlisting}
+For some cases this is, however, undesirable. If \(x\) is of type \textit{Ref}, Carbon includes the null reference in the set of all references, which leads to an inconsistent state when inhaling the access rights to all references due to the non-null assumption.
 
-Other combinations using Boolean expressions are currently not considered unless they are part of a Boolean expression. This is due to the fact, that Viper does not supported them permission-based expressions as well.
+In order to support the combinations defined above, we add two rewriting rules explained in the following sections. In order to illustrate some of the challenges supporting these new expressions, we discuss the following example:
+\begin{longtable}{ p{1\textwidth} } 
+inhale \textbf{forall} \(x:Ref :: (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x))) \) \\
+\end{longtable}
 
-\subsection{Conjunction}
-As a first solution we propose to adapt the symbolic execution rules to handle these cases.
-If the entire expression is fully pure, this is handled as previously.The sub-expressions of the combinations may be depending on each other. An example for this would be: 
-\begin{equation}
-\label{eq1}
-	\mathbf{forall} \; x:T :: \{\}\  x\ \mathrm{in \ Set} \{\dots\} \Rightarrow acc(x.f) \ \&\& \ (x.f > 0)
-\end{equation}
-As a consequence, both expressions have to be evaluated sequentially. 
-Let's consider the case where both subexpressions denote a field permission. Due to the sequentiality constraint, we treat the first expression as before. We cannot generally reuse the inverse function and injectivity definition for the second expression as defined before. A adaption to the rules would therefore skip the evaluation of the condition, but essentially repeat all other steps for the second expression.
-If one of the expressions is pure, we treat it independently as before.
+If a reference \(x\) is within the set of references \(xs\), we inhale the access to the field location defined by that reference and gain the information that its value is equal to \(i\). If a reference is within the set \(ys\), we gain the access right to the predicate \(P(x)\). Please note, that we cannot assume the value of a field without holding partial permissions. The sub-expressions of the combinations may depend on each other, which enforces that \(acc(x.f)\) needs to be inhaled before accessing the field \(x.f\).
 
-As a second solution, we therefore propose to rewrite the given quantifiers to two quantifiers, so that the rewritten quantifiers allow us to reuse the symbolic execution rules presented: 
-\begin{equation}
-\begin{aligned}
-	\mathbf{forall} \; x:T :: \{trs\}\  c(x) \Rightarrow (e_1(x)\ \&\& \ e_2(x))  \mapsto \\
-	(\mathbf{forall} \; x:T :: \{trs\}\   c(x)  \Rightarrow e_1(x)) \ \&\& \\
-	(\mathbf{forall} \; x:T :: \{trs\}\   c(x) \Rightarrow  e_1(x))
-\end{aligned}
-\end{equation}
+When combining two quantifiers, the expressions may depend on the fact that the first expression is evaluated before the second expression as for the example shown above. As a consequence, the conditions have to be evaluated sequentially.
 
-As mentioned before, there is only a minimal advantage in adapting the symbolic rules due to the fact that the condition is evaluated multiple times. The value could also be cached. The triggers are passed along to both quantifiers.
+Both solutions for supporting the given for the conjunction and refinement of quantifiers rely on desugaring the expressions to a logically equivalent form.
 
-\subsection{Refining}
-Similar to the solution presented for the conjunction of expressions within a quantifier, besides having the option of adapting the symbolic execution rules for the previously shown solutions, we can desugare the expression to the already supported form by using its logical equal:
-\begin{equation}
-\begin{aligned}
-	\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x))  \mapsto \\
-	\mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x))
-\end{aligned}
-\end{equation}
+\subsection{Rewriting Rules}
+Both the conjunction and implication used to combine quantified expressions can be supported by rewriting the quantified expression to a form already supported before. The rewriting takes place after adding a condition if it was omitted as described above.
+
+If the expression on the right-hand side of the implication is pure or a permission already supported, no rewriting is necessary. We desugare the expression by duplicating the variable declaration and condition. The trigger is duplicated, and should be valid for both sub-expressions.
+
+\begin{longtable}{ p{1\textwidth} } 
+	\(\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x) \ \&\&\ e_2(x)) \) \\
+	\(\longmapsto (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_1(x)) \ \&\&\  (\mathbf{forall} \; x:T ::  \{trs\}\ c(x) \Rightarrow e_2(x)) \)
+\end{longtable}
+
+Considering the case where both quantifiers are permission-based, it is necessary to define the inverse function and injectivity for both sub-expressions separately. The rewriting rule only results in a minor overhead, since the evaluation of the condition \(c(x)\) is done twice for both quantifiers. This could however be cached. 
+
+An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A \:\&\&\: B) \Rightarrow C\). Using this property, a refinement of a condition can be desugared using its logical equal by adding the boolean expression to the condition.
+
+\begin{longtable}{ p{1\textwidth} } 
+	\(\mathbf{forall} \; x:T ::  \{trs\}\ c_1(x) \Rightarrow (c_2(x) \Rightarrow e(x))\) \\
+	\(\longmapsto \mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x)) \)
+\end{longtable}
+
+The rewriting function is described in table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
+
+\begin{longtable}{| p{1\textwidth} |} 
+\hline
+rewrite \textbf{forall} \(x:T :: \{trs\}\ c(x) \Rightarrow Exp\) \{\\
+res := Exp match \{\\
+\ident case \(b\)  : \\
+\ident \ident \textbf{forall} \(x:T :: \{trs\}\ c(x) \Rightarrow Exp\)\\
+\ident case \(Exp_1 \ \&\&\ Exp_2\) : \\
+\ident \ident rewrite(\textbf{forall} \(x:T :: \{trs\}\ c(x) \Rightarrow Exp_1) \ \&\&\  \)\\
+\ident \ident \ident \textbf{forall} \(x:T :: \{trs\}\ c(x) \Rightarrow Exp_2\)) \\
+\ident case \(b \Rightarrow Exp\) : \\
+\ident \ident rewrite(\textbf{forall} \(x:T :: \{trs\}\ (c(x) \ \&\&\  b) \Rightarrow Exp\)) \\
+\ident default  : \\
+\ident \ident \textbf{forall} \(x:T :: \{trs\}\ c(x) \Rightarrow Exp\)\\
+\ident \} \\
+\ident \textbf{return} res \\
+\}\\ \hline
+\caption{Rewriting rules for combinations of quantifiers after adding a condition if necessary.}
+\label{rewrite}
+\end{longtable}
 
 \subsection{Example}
-The forall expression of the example is rewritten to the following way: \\
+Let's consider the example mentioned at the beginning of the section. As a first step we add the condition to conform to the structure handled in quantified permissions:
 
-\begin{tabularx}{1\textwidth}{ X }
-\(\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (b \Rightarrow  acc(x.f)) \:\&\&\ (!b \Rightarrow acc(x.g)) \mapsto \) \\
-\((\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (b \Rightarrow  acc(x.f))) \:\&\&\ (\mathbf{forall\ } x:Ref :: x\ in\ xs \Rightarrow (!b \Rightarrow acc(x.g)) \mapsto \) \\
-\((\mathbf{forall\ } x:Ref :: (x\ in\ xs)  \:\&\&\ b \Rightarrow acc(x.f)) \:\&\&\ (\mathbf{forall\ } x:Ref :: (x\ in\ xs)  \:\&\&\ !b \Rightarrow  acc(x.g)) \) \\
-\end{tabularx}
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:Ref :: (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x))) \mapsto \) \\
+\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x)))\) \\
+\end{longtable}
 
+We then proceed to rewrite the new expression according to the algorithm of table \ref{rewrite}:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x)))\) \\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i))) \ \&\&\ \) \\
+\ident (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ ys \Rightarrow acc(P(x)))) \)\\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ \) \\
+\ident  (\textbf{forall} \(x:Ref :: true \ \&\&\ \ x\ in\ ys \Rightarrow acc(P(x))) \) \\
+\(\longmapsto\) (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow  acc(x.f)) \ \&\&\ \)\\
+\ident (\textbf{forall} \(x:Ref :: (true  \ \&\&\ \ x\ in\ xs ) \Rightarrow x.f  = i) \ \&\&\ \) \\
+\ident (\textbf{forall} \(x:Ref :: true \ \&\&\ \ x\ in\ ys \Rightarrow acc(P(x))) \) \\
+\end{longtable}
+
+At the end of the rewriting, we translate the three forall expressions sequentially. 
 
 \subsection{Implementation}
-The implementation for supporting the combinations presented uses the rewriting rules mentioned above. The desugaring takes place during the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
+The implementation for supporting the combinations presented uses the rewriting rules mentioned above. As a first implementation, the rewriting was done separately for Carbon and Silicon. This would have permitted adapting the rules for one of the verifiers only at a later point if desired. We decided however to move the rewriting to the parsing of the program. Both Carbon and Silicon accept the same program with the already rewritten expressions.
 
 %Nested Quantifiers
 \section{Nested Quantifiers}
-%Why nested quantifiers?
-In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers which are desirable to support.
+In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers we decided to support.
 
-In the first structure, all variables are defined at once, allowing condition and expression to depend on all of them:\\
+In the first structure, all variables are defined upfront, allowing condition and expression to depend on all of them:\\
 
 \begin{tabularx}{1\textwidth}{ X }
 	\( \mathbf{forall} \; x_1:T_1, \dots, x_n: T_n ::  \{trs\}\ c(x_1, \dots, x_n) \Rightarrow \) \\
 	\(e(x_1,  \dots, x_n)\)
 \end{tabularx}\\
 
-The expression \(e(x_1,  \dots, x_n)\) stands for any unquantified permission where we presented a quantified solution in the previous chapters, Pure quantifiers of this form are already supported in Viper. For the support of this new quantified expression we present a new generalisation of the previously shown algorithms in section \ref{generalN}.\\
+The expression \(e(x_1,  \dots, x_n)\) stands for any unquantified permission previously included in quantified permissions. Pure quantifiers of this form are already supported in Viper. For the support of this new quantified expression we present a new generalisation of the previously shown algorithms.\\
 
-The second structure represents a truly nested quantifier, where on the right-hand side of the implication. The following formula represents such a form with two quantifiers:\\
+The second structure represents a truly nested quantifier, where a second forall expression occurs on the right-hand side of the implication. The following formula represents this form:\\
 
 \begin{tabularx}{1\textwidth}{ X}
       \(\mathbf{forall \ }  x_1:T_1, \dots x_n:T_n ::  \{trs_1\}\  c_1(x_1, \dots, x_n) \Rightarrow \) \\
      \( ( \mathbf{forall \ } x_{n+1}:T_{n+1} :: \{trs_2\} \ c_2(x_1, \dots, x_{n+1}) \Rightarrow e(x_1, \dots, x_{n+1}))\)
 \end{tabularx}\\
 
-Here the expression \(e(x_1, x_2)\) can, as mentioned before, be any permission expression introduced or another quantified expression. As a solution we present a new rewriting rule in section \ref{rewritesN}.
+Here, the expression \(e(x_1, x_2)\) can, be any permission expression introduced before or another quantified expression. In order to support these expressions, we present a new rewriting rule.
 
-Both formulas allow us to define more complex quantifiers, for example access rights to a matrix, without resorting to reformulate them 
+Both formulas allow us to define more complex quantifiers, for example access rights to a matrix, without resorting to reformulate them. The set of allowed quantifier is extended to:
+\begin{longtable}{ p{1\textwidth} } 
+\textbf{forall} \(x_1: T_1, \dots, x_n : T_n :: \{trs\}\  Exp\),\\
+\ident \( Exp := b\)  \\
+\ident \ident \(|\ acc(e.f, p)\) \\
+\ident \ident \(|\ acc(P(arg_1, \dots, arg_n), p)\) \\
+\ident \ident \(|\ A \wand B\) \\
+\ident \ident \(|\ Exp_1 \ \&\&\ Exp_2\) \\
+\ident \ident \(|\ b \Rightarrow Exp\) \\
+\ident \ident \(|\) \textbf{forall} \(x_1: T_1, \dots, x_n : T_n :: \{trs_2\}\  Exp\)\\
+\label{combinations}
+\end{longtable}
 
-\subsection{Generalisation for Nested Quantified Permissions}
-\label{generalN}
+To support these nested quantifiers, we need to adapt the presented solution for quantified field, predicate and magic wands. How these approaches have to be adapted, is described in section \ref{multipleVars}. Additionally, we introduce a new rewriting rule for truly nested quantifiers  in section \ref{rewritesN}.
 
+\subsection{Multiple quantifier variables}
+\label{multipleVars}
+For both verification condition generation and symbolic execution, the representation of the general location used to express the updated permission does not change. There is no need to change the definition of the symbolic heap chunks. The translation of the quantifier to its neutral form, however, does. Again, we need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, each inverse function mapping from a general location to the value of one variable.
 
+In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T_i\) corresponding to the original value of the ith quantifier variable given the arguments defining the general location. The adapted inverse functions for quantified field and predicate permissions can be seen in figure \ref{nInv}.
 
-
-\subsubsection{Symbolic Heap Representation}
-By changing the number of variables a quantifier depends on, we do not need to change the design of the heap chunks itself. Both the types and arguments do not change. The way to translate an argument to its neutral form, however, does. We need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, which each map from a general location to the value of one variable.
-
-In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier given the arguments of the predicate. The adapted inverse functions for quantified field and predicate permissions can be seen in figure \ref{nInv}.
-
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{ X}
-\textit{/* Nested Field Quantifie */}\\
-\textbf{function }\(inv_i(a_1:A_1, \dots, a_n:A_n): T_i\) \\
-\( \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n :: c(x_1, \dots, x_n) \Rightarrow \) \\
-\ident \ident \ident \(inv_i(e_1 (x_1, \dots, x_n),…,e_n (x_1, \dots, x_n))==x_i \) \\
-\( \mathbf{forall \ }  a_1:A_1,\dots, a_n:A_n ::  c(inv_1(a_1, \dots ,a_n ), \dots, inv_n(a_1, \dots, a_n)) \Rightarrow \) \\
-\ident \ident \ident \(e_i (inv_1(a_1,\dots, a_n ), \dots, inv_n(a_1,\dots, a_n )) = a_i \) \\
+\begin{longtable}{ p{1\textwidth} } 
+\textit{/* Nested Field Quantifier */}\\
+\textbf{function }\(inv_i(r: Ref): T_i\) \\
+\( \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n :: c(x_1, \dots, x_n) \Rightarrow inv_i(e (x_1, \dots, x_n))==x_i \) \\
+\( \mathbf{forall \ }  r:Ref ::  c(inv_1(r), \dots, inv_m(r) \Rightarrow e (inv_1(r), \dots, inv_m(r)) = r \) \\
 \\
 \textit{/* Nested Predicate Quantifier */}\\
 \textbf{function }\(inv_i(a_1:A_1, \dots, a_n:A_n): T_i\) \\
 \( \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n :: c(x_1, \dots, x_n) \Rightarrow \) \\
 \ident \ident \ident \(inv_i(e_1 (x_1, \dots, x_n),…,e_n (x_1, \dots, x_n))==x_i \) \\
-\( \mathbf{forall \ }  a_1:A_1,\dots, a_n:A_n ::  c(inv_1(a_1, \dots ,a_n ), \dots, inv_n(a_1, \dots, a_n)) \Rightarrow \) \\
-\ident \ident \ident \(e_i (inv_1(a_1,\dots, a_n ), \dots, inv_n(a_1,\dots, a_n )) = a_i \) \\
-\end{tabularx}
+\( \mathbf{forall \ }  a_1:A_1,\dots, a_n:A_n ::  c(inv_1(a_1, \dots ,a_n ), \dots, inv_m(a_1, \dots, a_n)) \Rightarrow \) \\
+\ident \ident \ident \(e_i (inv_1(a_1,\dots, a_n ), \dots, inv_m(a_1,\dots, a_n )) = a_i \) \\
 \caption[Nested Inverse Functions]
-   {Inverse Function definitions for nested quantifiers for quantified field and predicate permissions, for all inverse functions \( i\), where \( 1 \leq  i \leq  n \).}
+   {Inverse Function definitions for nested quantifiers for quantified field and predicate permissions, for all inverse functions \( i\), where \( 1 \leq  i \leq  m \), \(m\) being the number of quantifier variables.}
 \label{nInv}
-\end{figure}
+\end{longtable}
 
-Using these inverse functions also enforces us to restrict the allowed expressions for nested quantifiers. \(e(x)\) has to be injective. These new conditions are shown in figure.
+Using these inverse functions also enforces us to restrict the allowed expressions for nested quantifiers. \(e(x)\) has to be injective. These new conditions are shown in figure \ref{nInjectivity}.
 
-
-\subsubsection{Treatement of Permissions}
-With the new quantified predicate heap chunks defined above, we redefine \(inhale\) and \(exhale\) operations for quantified predicate permissions.
-
-Inhaling a nested quantified permission is now done using the inverse definition shown before. The newly generated heap chunk uses the inverse functions to whether the conditions of the general locations are met, as well as the determination of the permission amount itself.
-
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x)) \) \{\\
-\ident Let y be a fresh symbolic constant of type\( \ T\) \\
-\ident \textit{/* Symbolically evaluate source-level expressions */} \\
-\ident \( \mathbf{var\ } (\pi_1, \underline{c}(y)) := eval(h_0, \pi_0, c_y)) \)\\
-\ident \( \mathbf{var\ } (\pi_{2_1},\underline{e_1}(y)) := eval(h_0, \pi_1 \cup \{ \) \underline{c}\( (y)\}, e_{1_y})) \)\\
-\ident [\dots] \\
-\ident \( \mathbf{var\ } (\pi_{2_n},\underline{e_1}(y)) := eval(h_0, \pi_0, e_{n_y})) \)\\
-
-\ident \( \mathbf{var\ } (\pi_3,\underline{p}(y)) := eval(h_0, \pi_{2_n}, p_y))) \)\\
-\ident \( \mathbf{var\ } \pi_4 := \pi_3 \backslash \{\underline{c}(y)\} \)\\
+\begin{longtable}{ p{1\textwidth} } 
+\textit{/* Nested Field Quantifier */}\\
+\( \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n, y_1:T_1, \dots, y_n:T_n :: (x_1 != y_1 || \dots ||  x_n != y_n) \ \&\&\ c(x_1, 
+\dots, x_n) \ \&\&\ c(y_1, \dots, y_n) \Rightarrow e(x_1, \dots, x_n) != e(y_1, \dots, y_n)\) \\
 \\
-\ident \textit{/* Introduce inverse function */}\\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow A_1, \dots, A_n\) \\
-\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall a_1: A_1, \dots, a_n: A_n \cdot c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
-\ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
-\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\textit{/* Nested Predicate Quantifier */}\\
+\(\ \mathbf{forall \ }  x_1:T_1, \dots, x_n:T_n, y_1:T_1, \dots, y_n:T_n :: (x_1 != y_1 || \dots ||  x_n != y_n) \ \&\&\ c(x_1, 
+\dots, x_n) \ \&\&\ c(y_1, \dots, y_n) \Rightarrow (e_1(x_1, \dots, x_n) != e_1 (y_1, \dots, y_n) || \dots || e_n(x_1, \dots, x_n) != e_n (y_1, \dots, y_n)\) \\
 \\
-\ident Let  \(v\)  be a fresh value map \\
-\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{pred(a_1, \dots, a_n) \mapsto \) \\
-\ident \ident \ident  \([v(a_1, \dots, a_n), \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0] \}  \) \\
-\ident \textbf{return} \( (h_1, \pi_6) \) \\
-\}\\ \hline
-\end{tabularx}
-\caption[Inhaling a Quantified Field Permission]
-   {Symbolic execution rules for inhaling a quantified predicate permission.}
-\label{qpnInhale}
-\end{figure}
+\caption[Rewriting Rules for Nested Inverse Functions]
+   {New injectivity definition for nested quantifiers.}
+\label{nInjectivity}
+\end{longtable}
 
-Exhaling a nested quantified permission is done analogously. The check for the inverse function is also altered accordingly.
-
-%exhale
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{exhale}\(\ (h_0, \pi_0, \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),…,e_n (x)), p(x))\) \{\\
-\ident Let y be a fresh symbolic constant of type\( \ T\) \\
-\\
-\ident \textit{/* Check injectivity of receiver expression */} \\
-\ident Let \(\ y_1, y_2\ \) be a fresh symbolic constants of Type \(\ T\) \\
-\ident \(\mathbf{check \ } \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land (\underline{e_1}(y_1) = \underline{e_1}(y_2)) \land \dots \land  (\underline{e_n}(y_1) = \underline{e_n}(y_2)) \Rightarrow \) \\
-\ident \ident \ident \ident \(y_1 = y_2\) \\
-\\
-\ident \textit{/* Introduce inverse function (as above)*/}\\
-\ident [\dots] \\
-\\
-\ident \textit{/* Remove Permissions */}\\
-\ident \( \mathbf{var \ } h_1 :=  remove(h_0, \pi_6, f, \lambda a_1, \dots, a_n \cdot \underline{c}(e^{-1}(a_1, \dots, a_n)) ? \)\\ 
-\ident \ident \ident  \( \underline{p}(e^{-1}(a_1, \dots, a_n)) : 0))  \) \\
-\ident \textbf{return} \( (h_1, \pi_6) \) \\
-\}\\ \hline
-\end{tabularx}
-\caption[Exhaling a Quantified Field Permission]
-   {Symbolic execution rules for exhaling a quantified predicate permission.} %expand description: check, remove....
-\label{qpnExhale}
-\end{figure}
-
-%remove
-\begin{figure}[h]
-  \centering
-\begin{tabularx}{1\textwidth}{| X |}
-\hline
-\textbf{remove}\(\ (h_0, \pi_0, f, g) \) \{\\
-\ident Let \(h_{pred} \subseteq h_0\) be all chunks in given state for predicate \(pred\) \\
-\ident \textit{/* Processed chunks */} \\
-\ident \( \mathbf{var \ } h'_{pred} := \emptyset \) \\
-\ident \textit{/* Permission still to taken */} \\
-\ident \( \mathbf{var \ } q_{needed} :=  q \)   \\
-\ident \textbf{foreach} \(pred(a_1, \dots, a_n) \mapsto [v_i(a_1, \dots, a_n), q_i(a_1, \dots, a_n)] \in h_{pred}\) \textbf{do:} \\
-\ident \ident \textit{/* Determine the permissions to take from this chunk */} \\
-\ident \ident \( \mathbf{var \ } q_{current} := ( \lambda a_1, \dots, a_n \cdot min(q_i(a_1, \dots, a_n), q_{needed}(a_1, \dots, a_n))) \)\\
-\\ 
-\ident \ident \textit{/* Decrease the permissions still needed */} \\
-\ident \ident \(q_{needed} := (\lambda a_1, \dots, a_n \cdot q_{needed}(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n) \)\\
-\\
-\ident \ident \textit{/* Add an updated chunk to the processed chunks */} \\
-\ident \ident \( h'_{pred} := h'_{pred} \cup \{r.f \mapsto [v_i((a_1, \dots, a_n), (q_i(a_1, \dots, a_n) - q_{current}(a_1, \dots, a_n)] \} \)\\
-\\
-\ident \textit{/* Check that sufficient permissions were removed */} \\
-\ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(a_1, \dots, a_n) = 0 \) \\
-\ident \textbf{return} \( (h_1 \backslash h_{pred})  \cup h'_{pred} \) \\
-\}\\ \hline
-\end{tabularx}
-\caption[Remove a Quantified Field Permission]
-   {Symbolic execution rules for removing a quantified field permission. Eval. Check...}
-\label{qpnRemove}
-\end{figure}
-
-The definition of removing a permission amount from a quantified expression does not need to be changed except for the filtering of the quantified chunks. After that, we again iterate through these chunks, taking permission greedily, and raising an error if not enough permission is available. The updated definition can be seen in figure %\ref{qpRemove}.
-
-\subsection{Treatment of Symbolic Values}
-The predicate snapshot is used during unfold, fold and unfolding, where unfold corresponds to a field read and fold to field write in the context of a quantified field permission.
-
-
-\subsection{Rewriting Rules for Nested Quantified Permissions}
+As an additional change to the approaches, any occurrence of the inverse function is replaced by the tuple of all inverse function as defined above. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in table \ref{qfnInhaleCond} and for symbolic execution in table \ref{qpnInhaleSyn} (TODO). Other approaches are adapted analogously for nested quantifiers, but are omitted here.
+ 
+\subsection{Rewriting Nested Quantified Permissions}
 \label{rewritesN}
+If an expression is truly nested, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does not change the expression, but allows us to reuse the approach mentioned above. The trigger of the rewritten epxression has to combine all combination of both trigger sets to include all variables. If at least one triggersets are omitted, the new trigger will be empty.
 
-\begin{tabularx}{1\textwidth}{ X}
+The rewriting rules are displayed in table \ref{nRewriting}.
+
+\begin{longtable}{ p{1\textwidth} } 
       \(\mathbf{forall \ }  x_1:T_1, \dots x_n:T_n ::  \{trs_1\}\  c_1(x_1, \dots, x_n) \Rightarrow \) \\
-\ident \ident \ident     \( ( \mathbf{forall \ } x_{n+1}:T_{n+1} :: \{trs_2\} \ c_2(x_1, \dots, x_{n+1}) \Rightarrow e(x_1, \dots, x_{n+1}))\)
+\ident \ident \ident     \( ( \mathbf{forall \ } y_1:T_{n+1}, \dots, y_m: T_{n+m}:: \{trs_2\} \)\\
+\ident \ident \ident  \(c_2(x_1, \dots, x_n, y_1, \dots, y_{m}) \Rightarrow e(x_1, \dots, x_n, y_1, \dots, y_{m}))\)
 \\
-    \( \longmapsto\)\\
-\\
-      \(\mathbf{forall \ }  x_1:T_1, \dots x_{n+1}:T_{n+1} ::  \{trs_1 \times trs_2\}\  \) \\ 
-\ident \ident \ident \(( c_1(x_1, \dots, x_n) \:\&\&\:   \ c_2(x_1, \dots, x_{n+1}) )  \Rightarrow  e(x_1, \dots, x_{n+1}))\) \\
-\end{tabularx}\\
+\( \longmapsto \mathbf{forall \ }  x_1:T_1, \dots x_n:T_{n}, y_1: T_{n+1}, \dots, y_m: T_{n+m} ::  \{trs_1 \times trs_2\}\ \) \\ 
+\ident \ident \ident \(( c_1(x_1, \dots, x_n) \:\&\&\:   \ c_2(x_1, \dots, x_n, y_1, \dots, y_m) )  \Rightarrow \) \\
+\ident \ident \ident  \(e(x_1, \dots, x_n, y_1, \dots, y_m)) \) \\
+\caption[Nested Inverse Functions]
+   {Additional Rewriting Rules in order to support forall expressions within quantifiers.}
+\label{nRewriting}
+\end{longtable}
 
 \section{Evaluation}
 \section{Conclusion}

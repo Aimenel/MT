@@ -1,0 +1,62 @@
+field f:Int
+field g:Int
+field next:Ref
+
+method m1(r:Ref, xs: Seq[Ref], i:Int, isOdd:Bool)
+requires r in xs
+requires forall x:Ref :: x in xs ==> acc(x.f)
+requires forall x:Ref :: (x in xs && isOdd) ==> acc(x.f)
+requires forall x:Ref :: (x in xs && isOdd) ==> x.f == i
+requires forall x:Ref :: (x in xs && !isOdd) ==> acc(x.next)
+requires forall x:Ref :: (x in xs && !isOdd) ==> acc(x.next.g)
+ensures r in xs
+ensures forall x:Ref :: (x in xs && !isOdd) ==> acc(x.next)
+ensures forall x:Ref :: (x in xs && !isOdd) ==> acc(x.next.g)
+ensures r.next.g == i+1
+{
+    if (isOdd) {
+        assert(r.f == i)
+    } else {
+        r.next.g := i+1
+    }
+}
+
+predicate p(r: Ref, i :Int)
+{
+    acc(r.f) &&  r.f == i
+}
+
+
+method m2(r:Ref, xs: Seq[Ref], i:Int, isOdd:Bool)
+requires r in xs
+requires forall x:Ref :: (x in xs && isOdd)==> acc(p(x, i)) 
+requires forall x:Ref :: (x in xs && !isOdd) ==> acc(x.next) && acc(x.next.g)
+ensures isOdd ==> acc(p(r, 4))
+ensures forall x:Ref :: (x in xs && isOdd && x!= r) ==> acc(p(x, i))
+{
+    if (isOdd) {
+        unfold p(r, i)
+        assert(r.f == i)
+        r.f := 4
+        fold p(r, 4)
+    } else {
+        r.next.g := i+1
+    }
+}
+
+
+method m3(r:Ref, xs: Seq[Ref], i:Int, isOdd:Bool)
+requires r in xs
+requires forall x:Ref :: x in xs ==> (isOdd ==> acc(p(x, i))) && (!isOdd ==> acc(x.next) && acc(x.next.g))
+ensures isOdd ==> acc(p(r, 4))
+ensures forall x:Ref :: (x in xs && isOdd) ==> (x != r) ==> acc(p(x, i))
+{
+    if (isOdd) {
+        unfold p(r, i)
+        assert(r.f == i)
+        r.f := 4
+        fold p(r, 4)
+    } else {
+        r.next.g := i+1
+    }
+}
