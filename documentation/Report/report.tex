@@ -1137,7 +1137,77 @@ Using these inverse functions also enforces us to restrict the allowed expressio
 \end{longtable}
 
 As an additional change to the approaches, any occurrence of the inverse function is replaced by the tuple of all inverse function as defined above. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in table \ref{qfnInhaleCond} and for symbolic execution in table \ref{qpnInhaleSyn} (TODO). Other approaches are adapted analogously for nested quantifiers, but are omitted here.
- 
+
+%triggering
+\begin{longtable}{| p{1\textwidth} |}
+\hline
+\textbf{inhale forall } \(x_1:T_1, \dots, x_n:T_n :: c(x) \Rightarrow \) \\
+\ident \( acc(e(x_1, \dots, x_n).f, p(x_1, \dots, x_n)) \) \{\\
+\ident Let \textit{qpMask} be a new Mask\\
+\ident \textbf{havoc} qpMask \\
+\ident \underline{c} \(:= eval(c)\)\\
+\ident \underline{e} \(:= eval(e)\)\\
+\ident \underline{p} \(:= eval(p)\)\\
+\\
+\ident \textit{/* Inverse Assumptions */} \\
+\ident Let  \(inv_i\)  be a fresh function of type  \( Ref \Rightarrow T_i \) \\
+\ident \textbf{assume } \( \forall x_1:T_1, \dots, x_n:T_n  ::\{\underline{e}(x_1, \dots, x_n)\}\ \underline{c}(x_1, \dots, x_n)  \Rightarrow \) \\ 
+\ident \ident \(inv_i(\underline{e}(x_1, \dots, x_n)) = x_i \) \\
+\ident \textbf{assume\ } \( \forall r:Ref ::\{inv_1(r)\}, \dots, \{inv_n(r)\}\ c(inv_1(r), \dots, inv_n(r))  \Rightarrow \) \\
+\ident \ident \(\underline{e}(inv_1(r), \dots, inv_n(r)) = r \) \\
+\\
+\ident \textit{/* all receiver is non-null */} \\
+\ident \textbf{assume } \( \forall x_1:T_1, \dots, x_n:T_n  ::\{\underline{e}(x_1, \dots, x_n)\}\ \underline{c}(x_1, \dots, x_n)  \Rightarrow \) \\
+\ident \ident \(\underline{e}(x_1, \dots, x_n)) != null \) \\
+\\
+\ident \textit{/* assume e(x) is injective */} \\
+\ident \textbf{assume} \(\forall x_1:T_1, \dots, x_n:T_n, y_1:T_1, \dots, y_n:T_n :: \{\}\ (x_1 != y_1 || \dots ||  x_n != y_n) \ \&\&\ c(x_1, 
+\dots, x_n) \ \&\&\ c(y_1, \dots, y_n) \Rightarrow \underline{e}(x_1, \dots, x_n)\ != \underline{e}(y_1, \dots, y_n)\) \\
+\\
+\ident \textit{/* define updated permission */} \\
+\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{inv_1(r), \dots, inv_n(r)\}\) \\
+\ident  \ident \ident \ident \ident \(c(e(r)) \Rightarrow qpMask(r, f) = Mask(r.f) - p(inv_1(r), \dots, inv_n(r))\)\\
+\\
+\ident \textit{/* define independent permissions */} \\
+\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\{ inv_1(r), \dots, inv_n(r)\}\)\\
+\ident  \ident \ident \ident \ident \( \ \neg c(e^{-1}(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
+\ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\) \\
+\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
+\ident Mask \(:=\) qpMask \\
+\}\\ \hline
+\caption[carbon nested quantified field inhale]
+   {Translating nested quantified field inhale operation.}
+\label{qfnInhaleCond}
+\end{longtable} 
+
+\begin{longtable}{| p{1\textwidth} | } 
+\hline
+\textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x_1:T_1, \dots, x_n:T_n:T :: c(x_1, \dots, x_n) \Rightarrow acc(e(x_1, \dots, x_n).f, p(x_1, \dots, x_n))\) \{\\
+\ident Let \(y_1, \dots, y_n\) be a fresh symbolic constant of type \(T_1, \dots, T_n\) \\
+\ident \textit{/* Symbolically evaluate source-level expressions */} \\
+\ident \( \mathbf{var\ } (\pi_1, \underline{c}(y_1, \dots, y_n)) := eval(h_0, \pi_0, c(y_1, \dots, y_n))) \)\\
+\ident \( \mathbf{var\ } (\pi_2,\underline{e}(y_1, \dots, y_n)) := eval(h_0, \pi_1 \cup \{\underline{c}(y_1, \dots, y_n)\}, e(y_1, \dots, y_n)) \)\\
+\ident \( \mathbf{var\ } (\pi_3,\underline{p}(y_1, \dots, y_n)) := eval(h_0, \pi_2, p(y_1, \dots, y_n)) \)\\
+\ident \( \mathbf{var\ } \pi_4 := \pi_3 \backslash \{\underline{c}(y_1, \dots, y_n)\} \)\\
+\\
+\ident \textit{/* Introduce inverse function */}\\
+\ident Let  \(inv_i\)  be a fresh function of type  \(Ref \rightarrow T_i\) for all \(1 <= i <= n\) \\
+\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall r: Ref \cdot \underline{c}(inv_1(r), \dots, inv_n(r))  \Rightarrow\) \\
+\ident \ident \ident \ident \ident \ident \ident \(\underline{e}(inv_1(r), \dots, inv_n(r)) = r \} \) \\
+\ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x_1:T_1, \dots, x_n:T_n \cdot \underline{c}(x_1, \dots, x_n)  \Rightarrow \) \\
+\ident \ident \( (inv_1(\underline{e}(x_1, \dots, x_n)) = x_1)  \ \&\&\ \dots \ \&\&\ (inv_n(\underline{e}(x_1, \dots, x_n)) = x_n) \}  \) \\
+\\
+\ident Let  \(v\)  be a fresh value map \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{r.f \mapsto [v(r), \underline{c}(inv_1(r), \dots, inv_n(r))\ ?\) \\
+\ident \ident \ident \ident \ident \ident \ident \( \underline{p}(inv_1(r), \dots, inv_n(r)) : 0] \}  \) \\
+\ident \textbf{return} \( (h_1, \pi_6) \) \\
+\}\\ \hline
+\caption[Inhaling a Nested Quantified Field Permission]
+   {These symbolic execution rules for inhaling a nested quantified field permission.}
+\label{qpnInhaleSyn}
+\end{longtable}
+
+
 \subsection{Rewriting Nested Quantified Permissions}
 \label{rewritesN}
 If an expression is truly nested, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does not change the expression, but allows us to reuse the approach mentioned above. The trigger of the rewritten epxression has to combine all combination of both trigger sets to include all variables. If at least one triggersets are omitted, the new trigger will be empty.
