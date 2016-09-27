@@ -188,7 +188,7 @@ A magic wand A \(\wand\) B is a binary connective, which guarantees that if the 
 
 A magic wand instance is created using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side \cite{magicwand}.
 
-As for the concept of predicates, automatically reasoning about magic wands has been proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
+As for the concept of predicates, automatically reasoning about magic wands has been proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements \cite{magicwand}:
 
 \vbox{
 \begin{longtable}{ p{0.99\textwidth} } 
@@ -198,22 +198,13 @@ As for the concept of predicates, automatically reasoning about magic wands has 
 \ident \textit{inhale} \(B\),\\
 \end{longtable}
 }
-where \(\longmapsto\) represents a rewriting step.
+where \(\longmapsto\) represents a translation or rewriting step.
 
 A second ghost operation \textit{package} \(A \wand B \) calculates a suitable footprint for the instance \(A \wand B \). The operation fails, if no such footprint can be found. Otherwise, the foorprint is then exchanged for a new wand instance.
 
 %Quantified Field Permissions
 \subsection{Quantified Field Permissions}
 \label{qf}
-%In order to 
-%\begin{enumerate}
-%\item How to model the program state, including permissions and values?
-%\item How to check for a permission in a state?
-%\item How to add and remove permissions to and from a state?
-%\item How to evaluate (heap-dependent) expressions in a state?
-%\item When to preserve (frame) an expression's value across heap changes?
-%\end{enumerate}
-
 
 The implementation of the quantified field permissions support depends on the verifier used. We first summarise how quantified field permissions are supported in the verification generator Carbon, and then explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. 
 
@@ -230,7 +221,7 @@ The Boolean expression \(c(x)\) denotes a condition, under which a set of fields
 \begin{lstlisting}
 field f: Int
 
-method m3(r: Ref, xs:Seq[Ref])
+method m(r: Ref, xs:Seq[Ref])
 requires r in xs
 requires forall x: Ref :: x in xs ==> acc(x.f)
 {
@@ -238,7 +229,7 @@ requires forall x: Ref :: x in xs ==> acc(x.f)
 }
 \end{lstlisting}
 \caption[quantified field permission example example]
-   {Quantified field permission example. By inhaling the permission to the field \(f\) for all references in the set \textit{xs}, we gain the permission necessary to se a new value for the field \(r.f\).}
+   {Quantified field permission example. By inhaling the permission to the field \(f\) for all references in the set \textit{xs}, we gain the permission necessary to set a new value for the field \(r.f\).}
 \label{qfExample}
 \end{figure}
 
@@ -273,7 +264,7 @@ The exact translation can be seen in table \ref{qfconditionInhale}.
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume } \( \forall x:T ::\{\underline{e}(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
 \ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* all receiver is non-null */} \\
@@ -317,7 +308,7 @@ The translation is displayed in table \ref{qfconditionExhale}.
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume } \( \forall x:T ::\{\underline{e}(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
 \ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* define updated permission */} \\
@@ -362,14 +353,14 @@ The symbolic execution rules are presented in Table \ref{qfInhale}.
 \textbf{inhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) \{\\
 \ident Let y be a fresh symbolic constant of type\( \ T\) \\
 \ident \textit{/* Symbolically evaluate source-level expressions */} \\
-\ident \( \mathbf{var\ } (\pi_1, \underline{c}(y)) := eval(h_0, \pi_0, c_y)) \)\\
+\ident \( \mathbf{var\ } (\pi_1, \underline{c}(y)) := eval(h_0, \pi_0, c(y)) \)\\
 \ident \( \mathbf{var\ } (\pi_2,\underline{e}(y)) := eval(h_0, \pi_1 \cup \{\underline{c}(y)\}, e(y)) \)\\
 \ident \( \mathbf{var\ } (\pi_3,\underline{p}(y)) := eval(h_0, \pi_2, p(y)) \)\\
 \ident \( \mathbf{var\ } \pi_4 := \pi_3 \backslash \{\underline{c}(y)\} \)\\
 \\
 \ident \textit{/* Introduce inverse function */}\\
-\ident Let  \(e^{-1}\)  be a fresh function of type  \(Ref \rightarrow T\) \\
-\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall r: Ref \cdot \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \} \) \\
+\ident Let  \(e^{-1}\)  be a fresh function of type  \textit{Ref}\(\Rightarrow T\) \\
+\ident \(  \mathbf{var\ } \pi_5 :=  \pi_4 \cup \{\forall r: \)\textit{Ref}\(\cdot \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \} \) \\
 \ident \(  \mathbf{var\ } \pi_6 :=  \pi_5 \cup \{\forall x:T \cdot \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \}  \) \\
 \\
 \ident Let  \(v\)  be a fresh value map \\
@@ -393,13 +384,13 @@ Exhaling again starts by evaluating the condition, receiver expression and permi
 \\
 \ident \textit{/* Check injectivity of receiver expression */} \\
 \ident Let \(\ y_1, y_2\ \) be a fresh symbolic constants of Type \(\ T\) \\
-\ident \(\mathbf{check } \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\) \\
+\ident \(\mathbf{check}\ \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\) \\
 \\
 \ident \textit{/* Introduce inverse function (as above) */}\\
 \ident [\dots] \\
 \\
 \ident \textit{/* Remove Permissions */}\\
-\ident \( \mathbf{var\ } h_1 := \) \textit{remove} \((h_0, \pi_6, f, (\lambda r \cdot \underline{c}(e^{-1}(r)) ? \underline{p}(e^{-1}(r)) : 0))  \) \\
+\ident \( \mathbf{var\ } h_1 := \) \textit{remove} \((h_0, \pi_6, f, (\lambda r \cdot \underline{c}(e^{-1}(r))\ ?\ \underline{p}(e^{-1}(r)) : 0))  \) \\
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Exhaling a Quantified Field Permission]
@@ -431,7 +422,7 @@ The symbolic execution rules for the function \textit{remove} are displayed in T
 \ident \ident \( h'_f := h'_f \cup \{r.f \mapsto [v_i(r), (q_i(r) - q_{current}(r))] \} \)\\
 \\
 \ident \textit{/* Check that sufficient permissions were removed */} \\
-\ident \(\mathbf{check} \pi_0 \models \forall r \cdot q_{needed}(r) = 0 \) \\
+\ident \(\mathbf{check}\ \pi_0 \models \forall r \cdot q_{needed}(r) = 0 \) \\
 \ident \textbf{return} \( (h_1 \backslash h_f)  \cup h'_f \) \\
 \}\\ \hline
 \caption[Remove a Field Permission]
@@ -450,7 +441,7 @@ In order to use the remove function defined, we need to adapt the approach for i
 \ident \( \mathbf{var\ } (\pi_2,\underline{p}) := eval(h_0, \pi_1, p) \)\\
 \\
 \ident Let  \(v\)  be a fresh value map \\
-\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{r.f \mapsto [v(r), \}   (r == \underline{e})\ ?\ \underline{p} : 0]\) \\
+\ident \( \mathbf{var\ } h_1 :=  h_0 \cup \{r.f \mapsto [v(r), \}   (r = \underline{e})\ ?\ \underline{p} : 0]\) \\
 \ident \textbf{return} \( (h_1, \pi_2) \) \\
 \}\\ \hline
 \caption[Inhaling a single Quantified Field Permission]
@@ -468,7 +459,7 @@ Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. If a fi
 \ident [\dots] \\
 \\\
 \ident \textit{/* Remove Permissions */}\\
-\ident \( \mathbf{var\ } h_1 :=  remove(h_0, \pi_2, f, (\lambda r \cdot (r == \underline{e})\ ?\ \underline{p} : 0))  \) \\
+\ident \( \mathbf{var\ } h_1 := \) \textit{ remove}\((h_0, \pi_2, f, (\lambda r \cdot (r = \underline{e})\ ?\ \underline{p} : 0))  \) \\
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Exhaling a Field Permission]
@@ -485,13 +476,13 @@ The value information of a quantified field chunk is stored in its value map \(v
 \ident Let \(h_f \subseteq h_0\) be all quantified chunks in the given heap for field \(f\) \\
 \ident Let \(v\) be a fresh value map\\
 \ident \textit{/* Value summary path conditions */} \\
-\ident \textbf{var } \(def := \emptyset \) \\
+\ident \textbf{var } \textit{def} \(:= \emptyset \) \\
 \ident \textit{/* Permission summary */} \\
-\ident \textbf{var } \(perm := \lambda r \cdot 0\) \\
+\ident \textbf{var } \textit{perm} \(:= \lambda r \cdot 0\) \\
 \ident \textbf{foreach } \((r.f \mapsto [v_i(r), q_i(r)]) \in h_f \) \textbf{do:} \\
-\ident \ident \(def := def \cup \{ \forall r \cdot 0 < q_i(r)  \Rightarrow v(r) = v_i(r) \} \) \\
-\ident \ident \(perm := \lambda r \cdot (perm(r) + q_i(r)) \) \\
-\ident \textbf{return } \((v, def, perm)\) \\
+\ident \ident \(\mathit{def} := \mathit{def}  \cup \{ \forall r \cdot 0 < q_i(r)  \Rightarrow v(r) = v_i(r) \} \) \\
+\ident \ident \(\mathit{perm} := \lambda r \cdot (\mathit{perm}(r) + q_i(r)) \) \\
+\ident \textbf{return } \((v,\mathit{def}, \mathit{perm})\) \\
 \}\\ \hline
 \caption[Summarise Quantified Field Permissions]
    {These symbolic execution rules for summarising quantified field permissions correspond to Figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarising the values for the defined locations and the permission for all references.}
@@ -503,8 +494,8 @@ If we evaluate the value of a single field location \(e.f\), we first evaluate t
 \begin{longtable}{| p{1\textwidth} | }
 \hline
 \textbf{eval}\(\ (h_0, \pi_0, e.f) \) \{\\
-\ident \textbf{var } \((\pi_1, \underline{e}) :=\) \textbf{eval} \(h_0, \pi_0, e)\) \\
-\ident \textbf{var } \((v, \) \textit{def}\(,\) \textit{perm}\() :=\) \textbf{summarise} \(h_0, f)\) \\
+\ident \textbf{var } \((\pi_1, \underline{e}) :=\) \textbf{eval} (\(h_0, \pi_0, e)\) \\
+\ident \textbf{var } \((v, \) \textit{def}\(,\) \textit{perm}\() :=\) \textbf{summarise} (\(h_0, f)\) \\
 \ident \textbf{check } \(\pi_1 \models 0 < perm(\underline{e}) \) \\
 \ident \textbf{return } \(\pi_1 \cup\) \textit{def}\(, v(\underline{e})\) \\
 \}\\ 
@@ -532,71 +523,87 @@ A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the 
 
 \section{Generalising Quantified Field Permissions in Carbon}
 \label{genField}
-The approach presented in section \ref{cgqf} did not include any trigger. To restrict the 
-Some expressions generated in Carbon did not include any triggers. To reduce unnecessary invocations, we introduced new triggers for these expressions.
+The approach presented in section \ref{cgqf} did not include any triggers for some expressions. In such a case, triggers are generated by the underlying tools. To make the behavior of quantified expressions more reliable and to possibly reduce unnecessary invocations, we introduced triggers for these expressions. 
 
-Additionally we intended to support user-given triggers. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add the trigger to the expressions defining the new Mask. Since they describe the Mask properties are expressed from a neutral field read, they are triggered for all relevant expressions regardlessly. The injectivity assertion on the other hand, should never be triggered. For that purpose, we introduce a new function to set as a trigger, which is later on never used.
+The non-null assumption should be triggered for all locations. It would therefore be a possibility to reformulate the assumption as a quantifier over all references. It is however sufficient to use the same trigger as the first inverse assumption, namely \(e(x)\), since this expression will be triggered via the second inverse function when accessing a field location. An injectivity assertion on the other hand, doesn't need to be be triggered. For that purpose, we introduce a new function \textit{triggerFun}, which takes the quantifier variable as an argument.
 
-The last two changes are a general change to the approach as shown before. As a Carbon-specific change , we decided to reuse the trigger generation, which Carbon uses for pure quantifiers. As a current restriction, we impede the generation of additional variables for triggers due to the fact that nested quantifiers are not yet supported in carbon.
+As another extension, we added the support for user-given triggers on quantified permissions, which were previously not supported. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add a user-given trigger to the expression defining the permissions of the map \textit{Mask}, since the user cannot define a more general trigger than \textit{Mask}\((o , f)\)  and \(qpMask\)\((o , f) \). Other triggers are necessary to ensure the desired behavior of quantified permissions. The most obvious example would be the trigger for the second inverse assumption, which has to be triggered for each invocation of the inverse function. Instead of replacing the previously generated triggers, we add a user-given trigger to certain expressions. A user-given trigger without alterations can only be added to expression with the same quantifier variable type as the original quantifier. Since all other quantified assumption are already triggered by the inverse function, there is no advantage in adding a modified trigger in these cases. We add the user-given function to the first inverse assumption as well as the non-null assumption and check for sufficient permission.
 
+If no user-given trigger is defined, we reuse the trigger-generation function provided for pure quantifiers in order to provide additional triggers. This can be helpful in cases where \(e(x)\) does not constitute a valid trigger. Since Carbon does not support nested quantifiers, the generation of triggers was adapted to not define additional variables. The adapted triggers are displayed in Table \ref{qfconditionInhaleExtended} and \ref{qfconditionExhaleExtended}.
 
 %carbon inhale quantified field. Frame?
 \begin{longtable}{| p{1\textwidth} |}
 \hline
-\textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \) \{\\
-\ident Let \textit{qpMask} be a new Mask   \\
+\textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \longmapsto\)\\
+\ident Let qpMask be a new Mask\\
 \ident \textbf{havoc} qpMask \\
+\ident \underline{c} \(:= eval(c)\)\\
+\ident \underline{e} \(:= eval(e)\)\\
+\ident \underline{p} \(:= eval(p)\)\\
+\\
+\ident \textit{/* assert e(x) is injective */} \\
+\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\mathit{triggerFun}(y_1), \mathit{triggerFun}(y_2)\}\ y_1  \ne y_2 \land \) \\
+\ident \ident \ident \ident \ident \(\underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
-\ident \textbf{assume\ } \( \forall r:Ref ::\{inv(r)\}\ c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
+\ident \textbf{assume } \( \forall x:T ::\{\underline{e}(x)\} \{trs\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* all receiver is non-null */} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\ \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
-\\
-\ident \textit{/* assume e(x) is injective */} \\
-\ident \textbf{assume\ }\(\forall y_1: T, y_2:T ::\{e(y_1), e(y_2), trs(y_1), trs(y_2)\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\ident \textbf{assume } \( \forall x:T ::\{\underline{e}(x)\} \{trs\} \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
 \\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{ inv(r)\}\ c(inv(r)) \Rightarrow qpMask(r, f) = Maks(r.f) - Mask(inv(r), f)\)\\
+\ident \textbf{assume\ } \(\forall r:\textit{Ref} :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\ \{e^{-1}(r)\}\) \\
+\ident  \ident \ident \ident \ident \(\underline{c}(e(r)) \Rightarrow\) qpMask\((r, f) = \)Mask\((r.f) + p(e^{-1}(r))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\ \{ inv(r)\}\ \neg c(inv(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
-\ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\ (f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
-\ident \textbf{return} qpMask \\
-\}\\ \hline
+\ident \textbf{assume\ } \(\forall r:\)\textit{Ref}\( :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\{ e^{-1}(r)\}\)\\
+\ident  \ident \ident \ident \ident \( \ \neg \underline{c}(e^{-1}(r)) \Rightarrow\) qpMask\((r, f) = \) Mask\((r, f) \)\\
+\ident \textbf{assume\ } \(\forall o:\)\textit{Object}\(, f_o:\)\textit{Field}\( :: \{\)Mask\((o, f) \}\ \{\)qpMask\((o, f)\}\) \\
+\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow\) qpMask\((o , f) = \) Mask\((o,f) \)\\
+\ident Mask \(:=\) qpMask \\
+\hline
 \caption[carbon quantified field inhale]
-   {The expressions generated during a quantified inhale are adapted for the first inverse function assumption, as well as the non-null assumption. Both expressions are triggering on the expression denoting the receiver, and the user-given or automatically generated trigger.} %expand description: check, remove....
+   {The expressions generated during a quantified inhale are adapted for the first inverse function assumption, as well as the non-null assumption. Both expressions are triggered on the expression denoting the receiver and the user-given or automatically generated triggers. The translation are adapted from Table \ref{qfconditionInhale}.}
 \label{qfconditionInhaleExtended}
 \end{longtable}
 
 %carbon exhale quantified field
 \begin{longtable}{| p{1\textwidth} |}
 \hline
-\textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \) \{\\
-\ident Let \textit{qpMask} be a new Mask   \\
+\textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \longmapsto \) \\
+\ident Let qpMask be a new Mask   \\
 \ident \textbf{havoc} qpMask \\
+\ident \underline{c} \(:= eval(c)\)\\
+\ident \underline{e} \(:= eval(e)\)\\
+\ident \underline{p} \(:= eval(p)\)\\
+\\
 \ident \textit{/* assert e(x) is injective */} \\
-\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{triggerFun(e(y_1)), triggerFun(e(y_2))\}\  y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\mathit{triggerFun}(y_1), \mathit{triggerFun}(y_2)\}\ y_1  \ne y_2 \land \) \\
+\ident \ident \ident \ident \ident  \(\underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
 \\
 \ident \textit{/* sufficient permission */} \\
-\ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow Mask(e(x), f) \geq p(x)\)\\
+\ident \textbf{assert\ } \(\forall x:T ::\{\underline{e}(x)\} \{trs\}\ c(x) \Rightarrow \)Mask\((e(x), f) \geq \underline{p}(x)\)\\
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\} \{trs\}\  \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
-\ident \textbf{assume\ } \( \forall r:Ref ::\{inv(r)\}\  c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
+\ident \textbf{assume } \( \forall x:T ::\{\underline{e}(x)\} \{trs\} \ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{ inv(r)\}\ c(inv(r)) \Rightarrow qpMask(r, f) = Maks(r.f) - Mask(inv(r), f)\)\\
+\ident \textbf{assume\ } \(\forall r:\textit{Ref} :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\ \{e^{-1}(r)\}\) \\
+\ident  \ident \ident \ident \ident \(\underline{c}(e(r)) \Rightarrow\) qpMask\((r, f) = \)Mask\((r.f) - p(e^{-1}(r))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\ \{ inv(r)\}\ \neg c(inv(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
-\ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\ (f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
-\ident \textbf{return} qpMask \\
-\}\\ \hline
+\ident \textbf{assume\ } \(\forall r:\)\textit{Ref}\( :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\{ e^{-1}(r)\}\)\\
+\ident  \ident \ident \ident \ident \( \ \neg \underline{c}(e^{-1}(r)) \Rightarrow\) qpMask\((r, f) = \) Mask\((r, f) \)\\
+\ident \textbf{assume\ } \(\forall o:\)\textit{Object}\(, f_o:\)\textit{Field}\( :: \{\)Mask\((o, f) \}\ \{\)qpMask\((o, f)\}\) \\
+\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow\) qpMask\((o , f) = \) Mask\((o,f) \)\\
+\ident Mask \(:=\) qpMask \\
+\hline
 \caption[carbon quantified field exhale]
-   {Translating quantified field exhale operation. trs signifies a user-defined trigger or if no trigger was given, a set of auto-generated triggers as used for pure quantifiers}
+   {Translating quantified field exhale operation. \(trs\) is a place-holder for the user-defined triggers or if no trigger was given, a set of auto-generated triggers as used for pure quantifiers.The triggers were adapted for both assertions, as well as the first inverse assumptions. The translation is an adaption of Table \ref{qfconditionExhale}.}
 \label{qfconditionExhaleExtended}
 \end{longtable}
 
@@ -725,8 +732,6 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
    {Translation of exhaling a quantified predicate permission.The corresponding translation for quantified field permissions is displayed in Table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the general location and the inverse function.}
 \label{qpcExhale}
 \end{longtable}
-
-%TODO: triggering
 
 \subsection{Symbolic Execution}
 In this section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution.
