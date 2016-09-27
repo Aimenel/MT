@@ -614,11 +614,9 @@ As the general form of a quantified predicate permission we consider the followi
 \begin{equation}
  \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)), 
 \end{equation}
-where \(c(x)\) is a Boolean expression, \textit{pred} a predicate name, \(\ e_i(x)\) denotes the expression conforming to the type of the ith arguments of the predicate \textit{pred} and \(p(x)\) permission expression.
+where \(c(x)\) is a Boolean expression, \textit{pred} a predicate name, \(\ e_i(x)\) denotes the expression conforming to the type of the ith arguments of the predicate \textit{pred} and \(p(x)\) permission expression. Introducing this new form allows us to express permission to more complex structures such as a set of lists.
 
-Introducing this new form allows us to express permission to more complex structures such as a set of lists.
-
-To explain the adaption needed for the implementation, we again discuss the answers to the following questions:
+To explain the adaption needed for the implementation, we discuss the answers to the following questions \cite{isc}:
 \begin{enumerate}
 \item How to model the program state, including permissions and values?
 \item How to check for a permission in a state?
