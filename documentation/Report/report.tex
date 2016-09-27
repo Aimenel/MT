@@ -57,10 +57,10 @@ The verification infrastructure Viper supports a quantified field permission of 
 
 \section{Introduction}
 %viper implementation?
-In order to verify heap-manipulating programs as shared mutable data structures, separation logic\cite{reynolds2002separation} and implicit frames\cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
+In order to verify heap-manipulating programs as shared mutable data structures, separation logic \cite{reynolds2002separation} and implicit frames \cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
 Dynamic data structures may depend on a potentially unbound set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be defined as a predicate, for example a random access pattern in an array.
 
-The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} presented a solution to define permissions to a set of field locations regardless of the access pattern. It introduces a quantified heap chunk to hold the permissions and symbolic values for a set of fields simultaneously, as well as symbolic rules to evaluate specific values, remove and add permissions to quantified field chunks.
+The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc} presented a solution to define permissions to a set of field locations regardless of the access pattern. It introduces a quantified heap chunk to hold the permissions and symbolic values for a set of fields simultaneously, as well as symbolic rules to evaluate specific values, remove and add permissions to quantified field chunks.
 
 The approach was implemented in the verification infrastructure Viper \cite{viper}. It includes several front-ends which translate the given programs to Viper's intermediate language. These programs can be verified with Silicon, which is based on symbolic execution, and Carbon, a verification condition generator. There are currently three features of Viper handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structures and quantified field permissions \cite{isc} allows us to express point-wise specifications. 
 
@@ -70,7 +70,7 @@ This project presents the generalisation of that approach. Currently, the approa
 \end{equation}
 where {\it f} is a field of any type, {\it c(x)} is  a Boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
 
-As a generalisation, we introduce new approaches adapting this solution to allow quantified permissions for predicates\cite{predicates} and magic wands\cite{magicwand} instead of fields, as well as  nested quantifiers. Further we present rewriting rules to get rid of the fix structure of quantified field permissions, allowing expressions not defining a condition \(c(x)\) and combinations of pure and permission-based quantifiers.
+As a generalisation, we introduce new approaches adapting this solution to allow quantified permissions for predicates \cite{predicates} and magic wands \cite{magicwand} instead of fields, as well as  nested quantifiers. Further we present rewriting rules to get rid of the fix structure of quantified field permissions, allowing expressions not defining a condition \(c(x)\) and combinations of pure and permission-based quantifiers.
 
 \subsection{Outline}
 
@@ -81,28 +81,26 @@ The following section presents an overview to Viper, including the approach inte
 \section{Background}
 \label{background}
 %Permissions in general
-In this chapter we give an overview of the theory needed to understand the proposed generalisation of quantified permissions. The generalisation is intended as an extension to the support of quantified fields already integrated in Viper\cite{viper}\cite{viper2014}.
+In this chapter we give an overview of the theory needed to understand the proposed generalisation of quantified permissions. The generalisation is intended as an extension to the support for quantified fields already integrated in Viper \cite{viper}\cite{viper2014}.
 
 Viper is a verification infrastructure for permission-based reasoning and enables the development of program verifiers based on permission logics. It is designed to facilitate the implementation of verification techniques for programs, allowing developers to focus on the encoding of higher-level language features into its intermediate verification language. It includes an intermediate verification language, two automatic back-end verifiers \textit{Carbon} and \textit{Silicon}, as well as several front-ends translating other programming languages to Viper for verification. For the generalisation we allow new quantified expressions in Viper. To support the verification of these, we adapted both Carbon and Silicon. 
 
-\textit{Carbon}  is based on verification condition generation. It translates the given Viper program to Boogie\cite{leino2008boogie}, which proves the generated code.
+\textit{Carbon}  is based on verification condition generation. It translates the given Viper program to Boogie \cite{leino2008boogie}, which proves the generated code.
 In Carbon, the state is modelled by maps representing the heap and permissions held.
 
-\textit{Silicon} is based on the SMT solver Z3\cite{de2008z3} and Smallfoot-style Symbolic Execution\cite{berdine2005smallfoot}. The symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions, which represent the properties obtained while evaluating or executing commands.
+\textit{Silicon} is based on the SMT solver Z3 \cite{de2008z3} and Smallfoot-style Symbolic Execution \cite{berdine2005smallfoot}. The symbolic state is stored in heap chunks, holding permission and values for specific locations, and path conditions, which represent the properties obtained while evaluating or executing commands.
 
-A Viper program consists of global declaration called fields, predicates, functions, methods, and custom domains. To represent unbounded heap structures, Viper supports the following concepts: Predicates, Magic Wands and Quantified Field Permissions.
+A Viper program consists of global declarations of fields, predicates, functions, methods, and custom domains. To represent unbounded heap structures, Viper supports the following concepts: Predicates, Magic Wands and Quantified Field Permissions.
 
 %fields, methods, functions, predicates, custom domains.
 \subsection{Permissions}
-Permission logics were designed to define which locations of a heap are accessible. Viper works with fractional permissions with values between 0 and 1. Any permission greater than 0 grants read access, whereas 1 denotes full permission, which additionally allows write access to a location. 
+Permission logics were designed to define which locations of a heap are accessible. Viper works with fractional permissions with values between 0 and 1. Any permission greater than 0 grants read access to the corresponding field location, whereas 1 denotes full permission, which additionally allows write access to a location. 
 In Viper, there are various constructs for representing permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount defaults to full permission.
 
 \subsection{Program State}
-The program state of Viper includes the current permissions held, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations with permission. The process of verifying certain properties and updating the state during the execution of expressions can be reduced to inhaling and exhaling assertions. Inhaling is equal to adding the designated permission amount if the expression is represents a permission (e.g. acc\((e.f)\), or assuming a property if the assertion is pure. Exhaling translates to removing permission or asserting the properties specified. If the permission to a location is lost, we also lose information about its value.
-%better specified?
-Carbon uses maps to describe the heap and permissions held. 
-
-In Silicon, the state representation includes a set of heap chunks and path conditions.
+The program state of Viper includes the current permissions held, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations to which permission is held. The process of verifying certain properties and updating the state during the execution of expressions can be reduced to checking, inhaling and exhaling assertions. Inhaling is equal to adding the designated permission amount if the expression represents a permission (e.g. acc\((e.f)\)), or assuming a property if the assertion is pure.%define pure
+Exhaling translates to removing permission or asserting the properties specified. If the permission to a location is lost, we also lose information about its value.
+Carbon uses maps to describe the heap and permissions held. In Silicon, the state representation includes a set of heap chunks and path conditions.
 
 \subsection{Types and Domains}
 The built-in primitive types of Viper consist of integers (Int), Boolean expressions (Bool), references (Ref) and permissions (Perm). Additionally,  polymorphic sequences such as Seq[T] and sets Set[T] are included. Domains further allow the definition of custom domain types, which may include axioms and functions to define their properties.
@@ -119,7 +117,7 @@ Similarly to methods, functions consist of a name, preconditions, postconditions
 \subsection{Recursive Predicates}
 %"Predicates can be used both to abstract over concrete assertions and to write recursive specifications of heap data structures."
 
-Recursive Predicates\cite{parkinson2005separation} are typically used to specify linked data structures such as lists and trees. A predicate definition consists of a name,  list of formal parameters and a body. 
+Recursive Predicates \cite{parkinson2005separation} are typically used to specify linked data structures such as lists and trees. A predicate definition consists of a name,  list of formal parameters and a body. 
 Since predicates can be recursive, as in figure \ref{recursivePredicate}, and the predicate could potentially be unrolled endlessly, Viper treats predicate instances as opaque. Permissions and the logical facts entailed by its body are not directly available to the verifier. We use ghost operations to obtain the logical facts from a predicate instance and vice versa.
 A predicate instance may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for an instance of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate for a specified expression. An example using these ghost operations can be found in figure \ref{predicateExample}.
 
@@ -169,9 +167,9 @@ ensures unfolding pred(r) in r.f == 0
 \end{figure}
 
 \subsection{Magic Wands}
-A magic wand A \(\wand\) B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic\cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
+A magic wand A \(\wand\) B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic \cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
 
-A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side\cite{magicwand}.
+A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side \cite{magicwand}.
 
 As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
 
@@ -199,7 +197,7 @@ A second ghost operation \textit{package} calculates a suitable footprint, which
 %\end{enumerate}
 
 
-The implementation of the quantified field permissions support depends on the verifier used. We first summarise how quantified field permissions are supported in the verification generator Carbon, and then explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. 
+The implementation of the quantified field permissions support depends on the verifier used. We first summarise how quantified field permissions are supported in the verification generator Carbon, and then explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. 
 
 The supported shape of quantified field permission expression is defined as:
 
@@ -301,7 +299,7 @@ The translation is displayed in table \ref{qfconditionExhale}.
 
 \subsubsection{Symbolic Execution Rules for Quantified Field Permissions}
 \label{seqfp}
-The solution presented in  \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc} introduces a new type of heap chunk, new rules for inhaling and exhaling single and quantified field permissions, as well as for reading and writing these field values.
+The solution presented in  \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc} introduces a new type of heap chunk, new rules for inhaling and exhaling single and quantified field permissions, as well as for reading and writing these field values.
 
 %Quantified Field Chunk
 \paragraph{Quantified Field Chunk:}
@@ -340,7 +338,7 @@ The symbolic execution rules are presented in table \ref{qfInhale}.
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Inhaling a Quantified Field Permission]
-   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y). These expressions may not be considered well-formed otherwise.}
+   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y). These expressions may not be considered well-formed otherwise.}
 \label{qfInhale}
 \end{longtable}
 
@@ -366,7 +364,7 @@ Exhaling again starts by evaluating the condition, receiver expression and permi
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Exhaling a Quantified Field Permission]
-   {These symbolic execution rules for exhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. The \textbf{check} instruction is translated to a query, which is sent to the SMT solver for verification. The function \textit{remove} is defined in table \ref{qfRemove}.}
+   {These symbolic execution rules for exhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The \textbf{check} instruction is translated to a query, which is sent to the SMT solver for verification. The function \textit{remove} is defined in table \ref{qfRemove}.}
 \label{qfExhale}
 \end{longtable}
 
@@ -398,7 +396,7 @@ The symbolic execution rules for the function \textit{remove} are displayed in t
 \ident \textbf{return} \( (h_1 \backslash h_f)  \cup h'_f \) \\
 \}\\ \hline
 \caption[Remove a Field Permission]
-   {These symbolic execution rules for removing permission of a quantified field expression correspond to the rules defined in figure 3 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. The argument \(f\) represents a field, \(q\) contains the permission amount needed per reference.}
+   {These symbolic execution rules for removing permission of a quantified field expression correspond to the rules defined in figure 3 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The argument \(f\) represents a field, \(q\) contains the permission amount needed per reference.}
 \label{qfRemove}
 \end{longtable}
 
@@ -457,7 +455,7 @@ The value information of a quantified field chunk is stored in its value map \(v
 \ident \textbf{return } \((v, def, perm)\) \\
 \}\\ \hline
 \caption[Summarise Quantified Field Permissions]
-   {These symbolic execution rules for summarising quantified field permissions correspond to figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarising the values for the defined locations and the permission for all references.}
+   {These symbolic execution rules for summarising quantified field permissions correspond to figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarising the values for the defined locations and the permission for all references.}
 \label{qfSum}
 \end{longtable}
 
@@ -473,7 +471,7 @@ If we evaluate the value of a single field location \(e.f\), we first evaluate t
 \}\\ 
 \hline
 \caption[Evaluate Field Permission]
-   {These symbolic execution rules evaluating the value of a field permissions correspond to figure 6 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution}\cite{isc}. It calls the function summarise and uses the looks up the value of the given location in the returned value map.}
+   {These symbolic execution rules evaluating the value of a field permissions correspond to figure 6 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It calls the function summarise and uses the looks up the value of the given location in the returned value map.}
 \label{qfEval}
 \end{longtable}
 
