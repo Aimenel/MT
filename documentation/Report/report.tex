@@ -95,31 +95,48 @@ A Viper program consists of global declarations of fields, predicates, functions
 %fields, methods, functions, predicates, custom domains.
 \subsection{Permissions}
 Permission logics were designed to define which locations of a heap are accessible. Viper works with fractional permissions with values between 0 and 1. Any permission greater than 0 grants read access to the corresponding field location, whereas 1 denotes full permission, which additionally allows write access to a location. 
-In Viper, there are various constructs for representing permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount defaults to full permission.
+In Viper, there are various constructs for representing permission. The one most used is the accessibility predicate acc\((e_1.f, e_2)\), denoting permission to a field location \textit{f} of the reference denoted by \(e_1\). The permission amount is expressed by \(e_2\). If the permission amount is omitted, the permission amount defaults to full permission. If an expression does not include any permission expression, it is called pure.
 
 \subsection{Program State}
-The program state of Viper includes the current permissions held, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations to which permission is held. The process of verifying certain properties and updating the state during the execution of expressions can be reduced to checking, inhaling and exhaling assertions. Inhaling is equal to adding the designated permission amount if the expression represents a permission (e.g. acc\((e.f)\)), or assuming a property if the assertion is pure.%define pure
-Exhaling translates to removing permission or asserting the properties specified. If the permission to a location is lost, we also lose information about its value.
+The program state of Viper includes the current permissions held, as well as the assignments to program variables. The state can be manipulated by assertions, which may only depend on locations to which permission is held. The process of verifying certain properties and updating the state during the execution of expressions can be reduced to checking, inhaling and exhaling assertions. Inhaling is equal to adding the designated permission amount if the expression represents a permission (e.g. acc\((e.f)\)), or assuming a property if the assertion is pure. Exhaling translates to removing permission or asserting the properties specified. If the permission to a location is lost, we also lose information about its value.
 Carbon uses maps to describe the heap and permissions held. In Silicon, the state representation includes a set of heap chunks and path conditions.
 
 \subsection{Types and Domains}
-The built-in primitive types of Viper consist of integers (Int), Boolean expressions (Bool), references (Ref) and permissions (Perm). Additionally,  polymorphic sequences such as Seq[T] and sets Set[T] are included. Domains further allow the definition of custom domain types, which may include axioms and functions to define their properties.
+The built-in primitive types of Viper consist of integers (Int), Boolean expressions (Bool), references (Ref) and permissions (Perm). Additionally,  polymorphic sequences such as Seq[T] and sets Set[T] are included. Domains further allow the definition of custom domain types, which may include axioms and functions to define their properties. An example of a domain can be seen in Figure \ref{domainExample}.
+
+\begin{figure}[h]
+  \centering
+\begin{lstlisting}
+field val: Int
+
+domain IArray {
+  function loc(a: IArray, i: Int): Ref
+  function len(a: IArray): Int
+
+  axiom len_nonneg {
+    forall a: IArray :: len(a) >= 0
+  }
+}
+\end{lstlisting}
+\caption[predicate example]
+   {Example of a domain. The domain\(IArray\) represents an integer array and defines two function: \(loc\) returns the location of a specific value given an array and index, \(len\) the length of the given array. In addition to these functions, the axiom \(len\_nonneg\) defines that the length of an array has to be positive. The value of a location corresponds to \(loc(a, i).val\).}
+\label{domainExample}
+\end{figure}
 
 \subsection{Fields}
 Fields are globally defined and have a designated type. On declaration, the field exists for all references. In order to read a field value, a permission amount greater than 0 is necessary. When writing to a field, full permission is required.
 
-\subsection{Methods: }
-Methods consist of a name, arguments, pre- and postconditions, as well as a method body. The preconditions must include sufficient permissions to allow all heap dereferences used in the method body. During verification, the verifiers inhale the preconditions and try to prove the postconditions after the execution of the body. If a method call is executed, the called method's precondition is exhaled. Subsequently, we gain the information defined by the postcondition by inhaling.
+\subsection{Methods}
+Methods consist of a name, arguments (potentially including out-parameters), pre- and postconditions, as well as a method body. The preconditions must include sufficient permissions to allow all heap dereferences used in the method body. During verification, the verifiers inhale the preconditions and try to prove the postconditions after the execution of the body. If a method call is executed, the called method's precondition is exhaled. Subsequently, we gain the information defined by the postcondition by inhaling.
 
-\subsection{Functions: }
-Similarly to methods, functions consist of a name, preconditions, postconditions and optionally a body. Contrary to methods, the expressions within the body are restricted and must be pure. They may be used in assertions, as well as in axiom definition if the function is defined inside a domain.
+\subsection{Functions}
+Similarly to methods, functions consist of a name, preconditions, postconditions and optionally a body. Contrary to methods, the expressions within the body are restricted and must be pure. Predicates may be used in assertions.
 
 \subsection{Recursive Predicates}
 %"Predicates can be used both to abstract over concrete assertions and to write recursive specifications of heap data structures."
 
-Recursive Predicates \cite{parkinson2005separation} are typically used to specify linked data structures such as lists and trees. A predicate definition consists of a name,  list of formal parameters and a body. 
-Since predicates can be recursive, as in figure \ref{recursivePredicate}, and the predicate could potentially be unrolled endlessly, Viper treats predicate instances as opaque. Permissions and the logical facts entailed by its body are not directly available to the verifier. We use ghost operations to obtain the logical facts from a predicate instance and vice versa.
-A predicate instance may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for an instance of the predicate. Additionally, \textit{unfolding} additionally allows to temporarily unfold a predicate for a specified expression. An example using these ghost operations can be found in figure \ref{predicateExample}.
+Recursive Predicates \cite{parkinson2005separation} are typically used to specify linked data structures such as lists and trees. A predicate definition consists of a name,  list of formal parameters and a body. Since predicates can be recursive, as in Figure \ref{recursivePredicate}, and such a predicate could potentially be unrolled endlessly, Viper treats predicate instances as opaque. Permissions and the logical facts entailed by a predicate's body are not directly available to the verifier. We use ghost operations to obtain the logical facts from a predicate instance and vice versa.
+A predicate instance may be exchanged for its body via \textit{unfold}, whereas \textit{fold} exchanges the properties of the body for an instance of the predicate. Additionally, \textit{unfolding} additionally allows the temporary unfolding of a predicate while evaluating a specified expression. An example using these ghost operations can be found in Figure \ref{predicateExample}.
 
 %example recursive
 \begin{figure}[h]
@@ -162,27 +179,28 @@ ensures unfolding pred(r) in r.f == 0
 }
 \end{lstlisting}
 \caption[predicate example]
-   {Simple predicate example. By unfolding the predicate in line 14, we lose the access right to the predicate instance \textit{pred(r)} and gain the access rights to the field \textit{r.f}. This allows us to write to the field . By folding the predicate again, we regain the access rights to the predicate, which allows us no exhale the predicate in line 10. Unfolding temporarily unfolds the predicate \textit{pred(r)}, after which we obtain the permission to read the field \textit{r.f}, and also the value of that field. As a result, the assertion \textit{r.f == 0} evaluates to true.}
+   {Simple predicate example. By unfolding the predicate in line 14, we lose the access right to the predicate instance \textit{pred(r)} and gain the access rights to the field \textit{r.f}. This allows us to write to the field. By folding the predicate again, we regain the access rights to the predicate, which allows us no exhale the predicate in line 10. Unfolding temporarily unfolds the predicate \textit{pred(r)}, after which we obtain the permission to read the field \textit{r.f}, and also the value of that field. As a result, the assertion \textit{r.f == 0} evaluates to true.}
 \label{predicateExample}
 \end{figure}
 
 \subsection{Magic Wands}
-A magic wand A \(\wand\) B is a binary connective, which allows that given left-hand assertion A is satisfied in the current state, can be exchanged for the right-hand assertion B. It is a concept which was already mentioned in the first papers of separation logic \cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
+A magic wand A \(\wand\) B is a binary connective, which guarantees that if the given left-hand assertion A is satisfied in any state, then that assertion and the magic wand instance can be exchanged for the right-hand assertion B. The concept of magic wands was already mentioned in the first papers of separation logic \cite{reynolds2002separation} and can be used to keep track of partial data structures during a traversal.
 
-A magic wand instance is stored using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side \cite{magicwand}.
+A magic wand instance is created using its so-called \textit{footprint}, which is a subset of the current state that satisfies the wand's semantics. The footprint itself is not directly determined by its definition. The strategy of selecting a footprint in Viper is to include all permission required by the wands right-hand side, which we cannot prove to be provided by the wand's left-hand side \cite{magicwand}.
 
-As for the concept for predicates, automatically exchanging the assertions of a magic wand is proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
+As for the concept of predicates, automatically reasoning about magic wands has been proven to be undecidable \cite{brochenin2008almighty}. As a consequence, Viper treats an instance of a magic wand as opaque. Exchanging the left-hand side of a magic wand with its right-hand side can be done with the ghost operation \textit{apply}. It is desugared to the following statements:
 
 \vbox{
 \begin{longtable}{ p{0.99\textwidth} } 
-\( apply A \wand B \mapsto \) \\ 
-\ident \(exhale A \wand B \)\\
-\ident \(exhale A\)\\
-\ident \(inhale B\)\\
+ \textit{apply} \(A \wand B \longmapsto\) \\ 
+\ident \textit{exhale} \(A \wand B \)\\
+\ident \textit{exhale} \(A\)\\
+\ident \textit{inhale} \(B\),\\
 \end{longtable}
 }
+where \(\longmapsto\) represents a rewriting step.
 
-A second ghost operation \textit{package} calculates a suitable footprint, which is then exchanged for a new wand instance.
+A second ghost operation \textit{package} \(A \wand B \) calculates a suitable footprint for the instance \(A \wand B \). The operation fails, if no such footprint can be found. Otherwise, the foorprint is then exchanged for a new wand instance.
 
 %Quantified Field Permissions
 \subsection{Quantified Field Permissions}
@@ -252,7 +270,7 @@ The exact translation can be seen in table \ref{qfconditionInhale}.
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified field inhale]
-   {Translating quantified field inhale operation. The triggers are for the given forall expressions are included within curly brackets. For the expressions assuming non-null receivers and injectivity, there were no triggers defined. In our adaption of this approach, we included triggers for both assumptions. The updated translation can be seen in in figure \ref{qfconditionInhaleExtended}.}
+   {Translating quantified field inhale operation. The triggers are for the given forall expressions are included within curly brackets. For the expressions assuming non-null receivers and injectivity, there were no triggers defined. In our adaption of this approach, we included triggers for both assumptions. The updated translation can be seen in in Figure \ref{qfconditionInhaleExtended}.}
 \label{qfconditionInhale}
 \end{longtable}
 
@@ -293,7 +311,7 @@ The translation is displayed in table \ref{qfconditionExhale}.
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified field exhale]
-   {Translating quantified field exhale operation. The missing triggers are added in the adapted translation, which is defined in table \ref{qfconditionExhaleExtended}.} %expand description: check, remove....
+   {Translating quantified field exhale operation. The missing triggers are added in the adapted translation, which is defined in Table \ref{qfconditionExhaleExtended}.} %expand description: check, remove....
 \label{qfconditionExhale}
 \end{longtable}
 
@@ -316,7 +334,7 @@ To guarantee the existence of an inverse function, it is necessary that the expr
 %Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
 Inhaling a quantified field expression generates a new quantified heap chunk. In order to do that, we first evaluate the condition, receiver expression and permission expression. As a next step we introduce the inverse function of the expression \(e(x)\), which is only partially defined for the values where the given condition \(c(x)\) applies. The inverse function is defined by adding two conditions to the path conditions. As a last step, we generate the new quantified heap chunk using the previously defined inverse function  and add it to the heap. The value map is initially empty.
 
-The symbolic execution rules are presented in table \ref{qfInhale}.
+The symbolic execution rules are presented in Table \ref{qfInhale}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -338,7 +356,7 @@ The symbolic execution rules are presented in table \ref{qfInhale}.
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Inhaling a Quantified Field Permission]
-   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y). These expressions may not be considered well-formed otherwise.}
+   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in Figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y). These expressions may not be considered well-formed otherwise.}
 \label{qfInhale}
 \end{longtable}
 
@@ -364,13 +382,13 @@ Exhaling again starts by evaluating the condition, receiver expression and permi
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Exhaling a Quantified Field Permission]
-   {These symbolic execution rules for exhaling a quantified field permission correspond to the rules defined in figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The \textbf{check} instruction is translated to a query, which is sent to the SMT solver for verification. The function \textit{remove} is defined in table \ref{qfRemove}.}
+   {These symbolic execution rules for exhaling a quantified field permission correspond to the rules defined in Figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The \textbf{check} instruction is translated to a query, which is sent to the SMT solver for verification. The function \textit{remove} is defined in Table \ref{qfRemove}.}
 \label{qfExhale}
 \end{longtable}
 
 Removing the permission will raise an error, if not enough permission is held. Otherwise the function will return the updated heap. Since we create a new quantified field chunk for every inhale, the permission required may be held in multiple chunks simultaneously. When removing a certain permission amount, we first filter all quantified chunks with the required field \(f\). 
 We proceed to remove permissions greedily until we removed the required permission amount. Subtracting the permission for a specific chunk is expressed by defining introducing a function \(q_{current}\). After updating the permission for all quantified field chunks of field \(f\), we check that sufficient permission was taken and return the updated heap.
-The symbolic execution rules for the function \textit{remove} are displayed in table \ref{qfRemove}.
+The symbolic execution rules for the function \textit{remove} are displayed in Table \ref{qfRemove}.
 
 %remove
 \begin{longtable}{| p{1\textwidth} |}
@@ -396,12 +414,12 @@ The symbolic execution rules for the function \textit{remove} are displayed in t
 \ident \textbf{return} \( (h_1 \backslash h_f)  \cup h'_f \) \\
 \}\\ \hline
 \caption[Remove a Field Permission]
-   {These symbolic execution rules for removing permission of a quantified field expression correspond to the rules defined in figure 3 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The argument \(f\) represents a field, \(q\) contains the permission amount needed per reference.}
+   {These symbolic execution rules for removing permission of a quantified field expression correspond to the rules defined in Figure 3 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The argument \(f\) represents a field, \(q\) contains the permission amount needed per reference.}
 \label{qfRemove}
 \end{longtable}
 
 \paragraph{Inhale Field Permission:}
-In order to use the remove function defined, we need to adapt the approach for inhaling and exhaling unquantified field permissions. In Silicon, inhaling a single field permission is only adapted if the field occurs in a quantifier. In that case, inhaling a field permission produces a quantified field permission as well. To express the field permission \(acc(e.f, p)\)  as its equivalent quantified chunk, we define its permission as \(p\) if  the reference is equal to the location specified by the expression \(e\). The updated inhaling rules are presented in table \ref{sqfInhale}.
+In order to use the remove function defined, we need to adapt the approach for inhaling and exhaling unquantified field permissions. In Silicon, inhaling a single field permission is only adapted if the field occurs in a quantifier. In that case, inhaling a field permission produces a quantified field permission as well. To express the field permission \(acc(e.f, p)\)  as its equivalent quantified chunk, we define its permission as \(p\) if  the reference is equal to the location specified by the expression \(e\). The updated inhaling rules are presented in Table \ref{sqfInhale}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -420,7 +438,7 @@ In order to use the remove function defined, we need to adapt the approach for i
 \end{longtable}
 
 \paragraph{Exhale Field Permission:}
-Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. If a field is quantified, we reuse the function remove, defining the required permission as \(p\) if the location is equal to \(e.f\) and 0 otherwise. The updated exhaling rules are presented in table \ref{sqfExhale}.
+Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. If a field is quantified, we reuse the function remove, defining the required permission as \(p\) if the location is equal to \(e.f\) and 0 otherwise. The updated exhaling rules are presented in Table \ref{sqfExhale}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -438,7 +456,7 @@ Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. If a fi
 \end{longtable}
 
 \paragraph{Evaluation}
-The value information of a quantified field chunk is stored in its value map \(v\). It represents a under-specified total function and is defined per reference. A symbolic heap may consist of multiple chunks for the same field. To provide a simple translation for field-lookups, the function summarise was introduced. Given a field \(f\), it generates a value map, containing the values for all references defined, as well as the permission expressions held per location. Path conditions are not considered. The symbolic execution rules are defined in table \ref{qfSum}.
+The value information of a quantified field chunk is stored in its value map \(v\). It represents a under-specified total function and is defined per reference. A symbolic heap may consist of multiple chunks for the same field. To provide a simple translation for field-lookups, the function summarise was introduced. Given a field \(f\), it generates a value map, containing the values for all references defined, as well as the permission expressions held per location. Path conditions are not considered. The symbolic execution rules are defined in Table \ref{qfSum}.
 
 \begin{longtable}{| p{1\textwidth} | }
 \hline
@@ -455,11 +473,11 @@ The value information of a quantified field chunk is stored in its value map \(v
 \ident \textbf{return } \((v, def, perm)\) \\
 \}\\ \hline
 \caption[Summarise Quantified Field Permissions]
-   {These symbolic execution rules for summarising quantified field permissions correspond to figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarising the values for the defined locations and the permission for all references.}
+   {These symbolic execution rules for summarising quantified field permissions correspond to Figure 5 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It introduces a fresh value map and walks through all quantified field chunks of field \(f\), summarising the values for the defined locations and the permission for all references.}
 \label{qfSum}
 \end{longtable}
 
-If we evaluate the value of a single field location \(e.f\), we first evaluate the location and summarise all heap chunks of field \(f\). After checking we hold sufficient permission, we read the value from the generated value function. The symbolic execution rules are presented in table \ref{qfEval}.
+If we evaluate the value of a single field location \(e.f\), we first evaluate the location and summarise all heap chunks of field \(f\). After checking we hold sufficient permission, we read the value from the generated value function. The symbolic execution rules are presented in Table \ref{qfEval}.
 
 \begin{longtable}{| p{1\textwidth} | }
 \hline
@@ -471,12 +489,12 @@ If we evaluate the value of a single field location \(e.f\), we first evaluate t
 \}\\ 
 \hline
 \caption[Evaluate Field Permission]
-   {These symbolic execution rules evaluating the value of a field permissions correspond to figure 6 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It calls the function summarise and uses the looks up the value of the given location in the returned value map.}
+   {These symbolic execution rules evaluating the value of a field permissions correspond to Figure 6 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. It calls the function summarise and uses the looks up the value of the given location in the returned value map.}
 \label{qfEval}
 \end{longtable}
 
 \paragraph{Field Write}
-A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the access permission of the field \(e_1.f\), followed by inhaling the equality of \(e_1.f\) and \(e_2\). Exhaling the permission of the field checks whether we possess sufficient permission to write to the field. The rules are presented in table \ref{qfWrite}
+A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the access permission of the field \(e_1.f\), followed by inhaling the equality of \(e_1.f\) and \(e_2\). Exhaling the permission of the field checks whether we possess sufficient permission to write to the field. The rules are presented in Table \ref{qfWrite}
 
 \begin{longtable}{| p{1\textwidth} | }
 \hline
@@ -617,7 +635,7 @@ Similar to quantified field permissions, we have to restrict the allowed express
 \ident \ident \ident \ident \(x_1 = x_2\) \\
 \end{tabularx}\\
 
-The adapted translations of inhaling and exhaling quantified predicate permissions are depicted in table \ref{qpcInhale} and table \ref{qpcExhale}.
+The adapted translations of inhaling and exhaling quantified predicate permissions are depicted in Table \ref{qpcInhale} and Table \ref{qpcExhale}.
 
 %carbon missing: triggers
 \begin{longtable}{| p{1\textwidth} |}
@@ -649,7 +667,7 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified predicate inhale]
-   {Translation of inhaling a quantified predicate permission. The corresponding translation for quantified field permissions is displayed in table \ref{qfconditionInhale}. The translation differs in the definition of the general location, the inverse function and the injectivity assumption. Additionally, there is no need for a non-null assumptions for predicates. The independent locations include all instances not satisfying the condition \(c(x)\), as well as  all mask entries not pointing to a predicate instance of \(pred\). To distinguish predicates by the predicate name, we introduce the function \textit{predicateId}, which is unique for each predicate name and generated when translating a predicate declaration.}
+   {Translation of inhaling a quantified predicate permission. The corresponding translation for quantified field permissions is displayed in Table \ref{qfconditionInhale}. The translation differs in the definition of the general location, the inverse function and the injectivity assumption. Additionally, there is no need for a non-null assumptions for predicates. The independent locations include all instances not satisfying the condition \(c(x)\), as well as  all mask entries not pointing to a predicate instance of \(pred\). To distinguish predicates by the predicate name, we introduce the function \textit{predicateId}, which is unique for each predicate name and generated when translating a predicate declaration.}
 \label{qpcInhale}
 \end{longtable}
 
@@ -687,7 +705,7 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified predicate exhale]
-   {Translation of exhaling a quantified predicate permission.The corresponding translation for quantified field permissions is displayed in table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the general location and the inverse function.}
+   {Translation of exhaling a quantified predicate permission.The corresponding translation for quantified field permissions is displayed in Table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the general location and the inverse function.}
 \label{qpcExhale}
 \end{longtable}
 
@@ -707,7 +725,7 @@ Given the new definition of quantified predicate heap chunks, we define the \(in
 
 \subsubsection{Quantified Inhaling} 
 \label{qpInhaleSec}
-The adapted symbolic execution rules for a inhaling a quantified permission can be seen in figure \ref{qpInhale}. It differs in the definition of the inverse function, as well as the values of the value map.
+The adapted symbolic execution rules for a inhaling a quantified permission can be seen in Figure \ref{qpInhale}. It differs in the definition of the inverse function, as well as the values of the value map.
 
 As before, inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition. Similarly the quantified field expression, the condition, argument expressions and permission expression are evaluated as a first step.
 
@@ -741,17 +759,17 @@ As a last step we introduce a value map, which is later used to keep track of th
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Inhaling a Quantified Predicate Permission]
-   {Symbolic execution rules for inhaling a quantified predicate permission. They refer to the rules for inhaling quantified field permissions of figure \ref{qfInhale}. The declaration of the inverse function is updated as described before. The inverse function takes a set of predicate arguments and returns the value of the variable originally expressed in the quantifier. The type of the value map corresponds to the snapshot type of the predicate.}
+   {Symbolic execution rules for inhaling a quantified predicate permission. They refer to the rules for inhaling quantified field permissions of Figure \ref{qfInhale}. The declaration of the inverse function is updated as described before. The inverse function takes a set of predicate arguments and returns the value of the variable originally expressed in the quantifier. The type of the value map corresponds to the snapshot type of the predicate.}
 \label{qpInhale}
 \end{longtable}
 
 \subsubsection{Quantified Exhaling} 
 \label{qpExhaleSec}
-The adaptations necessary for exhaling quantified predicate permissions again include an update for evaluating the argument expressions, as well as the introduction of the inverse function as defined for inhaling. Additionally, the injectivity check needs to be adapted as defined in the previous section. The new rules are defined in table \ref{qpExhale}.
+The adaptations necessary for exhaling quantified predicate permissions again include an update for evaluating the argument expressions, as well as the introduction of the inverse function as defined for inhaling. Additionally, the injectivity check needs to be adapted as defined in the previous section. The new rules are defined in Table \ref{qpExhale}.
 
 After evaluating the expressions denoted by the quantified predicate permission, we check the injectivity before introducing the inverse functions as defined in the inhaling. The check passes if for any two variables satisfying the initial condition,  at least one argument expression is evaluated to a different symbolic value.
 
-The definition of removing permission from a quantified predicate is adapted as well. It filters quantified chunks to include only the chunks with the given predicate name. We again iterate through these chunks, taking permission greedily and check whether enough permission was taken as a final step. The definition of \(q_{needed}\) and \(q_{current}\) is adapted to take a set of predicate arguments. The updated definition for the function remove can be seen in table \ref{qpRemove}.
+The definition of removing permission from a quantified predicate is adapted as well. It filters quantified chunks to include only the chunks with the given predicate name. We again iterate through these chunks, taking permission greedily and check whether enough permission was taken as a final step. The definition of \(q_{needed}\) and \(q_{current}\) is adapted to take a set of predicate arguments. The updated definition for the function remove can be seen in Table \ref{qpRemove}.
 
 %exhale
 \begin{longtable}{| p{1\textwidth} | } 
@@ -773,7 +791,7 @@ The definition of removing permission from a quantified predicate is adapted as 
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Exhaling a Quantified Predicate Permission]
-   {Symbolic execution rules for exhaling a quantified predicate permission. The corresponding rules for quantified field permission is displayed in table \ref{qfExhale}. The changes include the updated definition of the injectivity check, inverse function and general predicate location.} %expand description: check, remove....
+   {Symbolic execution rules for exhaling a quantified predicate permission. The corresponding rules for quantified field permission is displayed in Table \ref{qfExhale}. The changes include the updated definition of the injectivity check, inverse function and general predicate location.} %expand description: check, remove....
 \label{qpExhale}
 \end{longtable}
 
@@ -802,7 +820,7 @@ The definition of removing permission from a quantified predicate is adapted as 
 \ident \textbf{return} \( (h_1 \backslash h_{pred})  \cup h'_{pred} \) \\
 \}\\ \hline
 \caption[Remove a Quantified Predicate Permission]
-   {Symbolic execution rules for removing a quantified predicate permission. The corresponding rules for quantified field permission is displayed in table \ref{qfRemove}. The changes include the updated filtering of chunks by the predicate name, as well the cardinality of the input parameter of \(q_{current}\) and \(q_{needed}\), which are used to define the amount of permission subtracted per chunk.}
+   {Symbolic execution rules for removing a quantified predicate permission. The corresponding rules for quantified field permission is displayed in Table \ref{qfRemove}. The changes include the updated filtering of chunks by the predicate name, as well the cardinality of the input parameter of \(q_{current}\) and \(q_{needed}\), which are used to define the amount of permission subtracted per chunk.}
 \label{qpRemove}
 \end{longtable}
 
@@ -825,7 +843,7 @@ In order to use the remove function defined, we again need to adapt the approach
 \ident \textbf{return} \( (h_1, \pi_{n+1}) \) \\
 \}\\ \hline
 \caption[Inhaling a single Quantified Field Permission]
-   {The symbolic execution rules for inhaling a predicate permission, where the predicate is quantified at some point during the program, is adapted in order to represent all permission to the quantified predicate in quantified chunks. These rules correspond to the rules displayed for quantified field permission in table \ref{sqfInhale}. The definition of the quantified predicate chunk generated is adapted to consider all arguments of the predicate.}
+   {The symbolic execution rules for inhaling a predicate permission, where the predicate is quantified at some point during the program, is adapted in order to represent all permission to the quantified predicate in quantified chunks. These rules correspond to the rules displayed for quantified field permission in Table \ref{sqfInhale}. The definition of the quantified predicate chunk generated is adapted to consider all arguments of the predicate.}
 \label{sqpInhale}
 \end{longtable}
 
@@ -840,7 +858,7 @@ In order to use the remove function defined, we again need to adapt the approach
 \ident \textbf{return} \( (h_1, \pi_{n+1}) \) \\
 \}\\ \hline
 \caption[Exhaling a Field Permission]
-   {Analogous for inhaling a predicate permission, the symbolic execution rules for exhaling a predicate permission are adapted, if the predicate is quantified at some point during the program. These rules correspond to the rules displayed for quantified field permission in table \ref{sqfExhale}. The definition of the permission required is adapted to consider all arguments of the predicate.}
+   {Analogous for inhaling a predicate permission, the symbolic execution rules for exhaling a predicate permission are adapted, if the predicate is quantified at some point during the program. These rules correspond to the rules displayed for quantified field permission in Table \ref{sqfExhale}. The definition of the permission required is adapted to consider all arguments of the predicate.}
 \label{sqpExhale}
 \end{longtable}
 
@@ -848,7 +866,7 @@ In order to use the remove function defined, we again need to adapt the approach
 \label{qppVals}
 Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. Unfolding a predicate can be desugared as before. As for exhaling and inhaling single predicates, the functions fold and unfold only need to be adapted for predicates which are quantified at some point during the program.
 
-In order to summarise the values and permission of a single predicate, we adapt the summarise function presented for quantified field permission. The function walks through all quantified chunks of the given predicate, keeping track of the values and permissions held for all locations. The symbolic execution rules are displayed in table \ref{qpSum}.
+In order to summarise the values and permission of a single predicate, we adapt the summarise function presented for quantified field permission. The function walks through all quantified chunks of the given predicate, keeping track of the values and permissions held for all locations. The symbolic execution rules are displayed in Table \ref{qpSum}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -865,13 +883,13 @@ In order to summarise the values and permission of a single predicate, we adapt 
 \ident \textbf{return} \((v, def, perm)\) \\
 \}\\ \hline
 \caption[Summarise Quantified Field Permissions]
-   {Symbolic execution rules for summarsing quantified predicate permissions. The function is adapted from the summarise function for quantified field permission depicted in table \ref{qfSum}}
+   {Symbolic execution rules for summarsing quantified predicate permissions. The function is adapted from the summarise function for quantified field permission depicted in Table \ref{qfSum}}
 \label{qpSum}
 \end{longtable}
 
 \subsubsection{Unfold} 
 \label{qUnfold}
-When unfolding a quantified predicate, we first evaluate the arguments of the predicate and summarise the quantified predicate chunks in order to evaluate the predicate's snapshot. As a next step, we relinquish the permission for the predicate instance by exhaling write permission to the predicate instance, followed by inhaling the snapshot, which is a representation of the body of the predicate. The symbolic execution rules for the unfold operation are displayed in table \ref{qUnfold}.
+When unfolding a quantified predicate, we first evaluate the arguments of the predicate and summarise the quantified predicate chunks in order to evaluate the predicate's snapshot. As a next step, we relinquish the permission for the predicate instance by exhaling write permission to the predicate instance, followed by inhaling the snapshot, which is a representation of the body of the predicate. The symbolic execution rules for the unfold operation are displayed in Table \ref{qUnfold}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -890,7 +908,7 @@ When unfolding a quantified predicate, we first evaluate the arguments of the pr
 \ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
 \}\\ \hline
 \caption[Unfold  a Quantified Predicate Permission]
-   {Symbolic execution rules for the unfold operation. The function summarise refers to the function declared in table \ref{qpSum}. Inhaling the snapshot of the predicate is equal to inhaling the predicate body for the values denoted by the snapshot.}
+   {Symbolic execution rules for the unfold operation. The function summarise refers to the function declared in Table \ref{qpSum}. Inhaling the snapshot of the predicate is equal to inhaling the predicate body for the values denoted by the snapshot.}
 \label{qUnfold}
 \end{longtable}
 
@@ -901,7 +919,7 @@ As mentioned in the background, folding a predicate exchanges the permission of 
 
 When folding a quantified predicate, we first generate a snapshot based on the current heap. Exhaling the snapshot is equivalent to exhaling the body of the predicate, where the values the body relies on are revealed in the snapshot. Exhaling the snapshot is checking that enough permission is held to fold the predicate. After exhaling the predicate body, we generate a new quantified predicate chunk, where the value map is defined for the given predicate and maps to the generated snapshot.
 
-The symbolic execution rules for the operation fold can be seen in figure \ref{qFold}.
+The symbolic execution rules for the operation fold can be seen in Figure \ref{qFold}.
 %fold
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -944,7 +962,7 @@ Quantified unfolding
 \label{qmw}
 As mentioned in chapter , a magic wand is represented using its footprint. A footprint may consist of multiple arguments. As a consequence, the definition for the inverse function and the injectivity test is defined analgous to quantified predicate permissions.
 
-In verification condition generation, a magic wand instance is represented in the form wand\( (f_1, \dots, f_n) \), where \(f_i\) represents the ith argument of the magic wand's footprint. The definitions for inhaling and exhaling a quantified magic wand is done exaclty as in figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with wand, and the argument expressions correspond to the footprints.
+In verification condition generation, a magic wand instance is represented in the form wand\( (f_1, \dots, f_n) \), where \(f_i\) represents the ith argument of the magic wand's footprint. The definitions for inhaling and exhaling a quantified magic wand is done exaclty as in Figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with wand, and the argument expressions correspond to the footprints.
 Again, there is no need to adapt the implementations of \textit{apply} and \textit{package}.
 
 As for symblolic execution rules, the same principle applies.%Go on?
@@ -1010,7 +1028,7 @@ An implication \(A \Rightarrow (B \Rightarrow  C) \) is logically equal to  \((A
 	\(\longmapsto \mathbf{forall} \; x:T ::( c_1(x) \:\&\&\: c_2(x)) \Rightarrow \mathbf{acc}(e(x).f, p(x)) \)
 \end{longtable}
 
-The rewriting function is described in table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
+The rewriting function is described in Table \ref{rewrite}. We treat the pure quantifiers and quantified permissions for fields, predicates and magic wands as our base case and express the combination of quantifiers as one of those base cases. As soon as we encounter a pure quantifier, we do not rewrite it.
 
 \begin{longtable}{| p{1\textwidth} |} 
 \hline
@@ -1040,7 +1058,7 @@ Let's consider the example mentioned at the beginning of the section. As a first
 \textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x)))\) \\
 \end{longtable}
 
-We then proceed to rewrite the new expression according to the algorithm of table \ref{rewrite}:
+We then proceed to rewrite the new expression according to the algorithm of Table \ref{rewrite}:
 \begin{longtable}{ p{1\textwidth} } 
 \textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i)) \ \&\&\ (x\ in\ ys \Rightarrow acc(P(x)))\) \\
 \(\longmapsto\) (\textbf{forall} \(x:Ref :: true \Rightarrow (x\ in\ xs \Rightarrow (acc(x.f) \ \&\&\ x.f  = i))) \ \&\&\ \) \\
@@ -1099,7 +1117,7 @@ To support these nested quantifiers, we need to adapt the presented solution for
 \label{multipleVars}
 For both verification condition generation and symbolic execution, the representation of the general location used to express the updated permission does not change. There is no need to change the definition of the symbolic heap chunks. The translation of the quantifier to its neutral form, however, does. Again, we need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, each inverse function mapping from a general location to the value of one variable.
 
-In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T_i\) corresponding to the original value of the ith quantifier variable given the arguments defining the general location. The adapted inverse functions for quantified field and predicate permissions can be seen in figure \ref{nInv}.
+In order to translate the given permission to that form, we need to adapt the definition of inverse function. The new inverse function returns a value of type \(T_i\) corresponding to the original value of the ith quantifier variable given the arguments defining the general location. The adapted inverse functions for quantified field and predicate permissions can be seen in Figure \ref{nInv}.
 
 \begin{longtable}{ p{1\textwidth} } 
 \textit{/* Nested Field Quantifier */}\\
@@ -1134,7 +1152,7 @@ Using these inverse functions also enforces us to restrict the allowed expressio
 \label{nInjectivity}
 \end{longtable}
 
-As an additional change to the approaches, any occurrence of the inverse function is replaced by the tuple of all inverse function as defined above. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in table \ref{qfnInhaleCond} and for symbolic execution in table \ref{qpnInhaleSyn} (TODO). Other approaches are adapted analogously for nested quantifiers, but are omitted here.
+As an additional change to the approaches, any occurrence of the inverse function is replaced by the tuple of all inverse function as defined above. We display the altered approach for inhaling a nested quantified field permission for verification condition generation in Table \ref{qfnInhaleCond} and for symbolic execution in Table \ref{qpnInhaleSyn} (TODO). Other approaches are adapted analogously for nested quantifiers, but are omitted here.
 
 %triggering
 \begin{longtable}{| p{1\textwidth} |}
@@ -1210,7 +1228,7 @@ As an additional change to the approaches, any occurrence of the inverse functio
 \label{rewritesN}
 If an expression is truly nested, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does not change the expression, but allows us to reuse the approach mentioned above. The trigger of the rewritten epxression has to combine all combination of both trigger sets to include all variables. If at least one triggersets are omitted, the new trigger will be empty.
 
-The rewriting rules are displayed in table \ref{nRewriting}.
+The rewriting rules are displayed in Table \ref{nRewriting}.
 
 \begin{longtable}{ p{1\textwidth} } 
       \(\mathbf{forall \ }  x_1:T_1, \dots x_n:T_n ::  \{trs_1\}\  c_1(x_1, \dots, x_n) \Rightarrow \) \\
@@ -1236,7 +1254,7 @@ Generally speaking, Silicon verifies a bit faster than Carbon. Inhaling a single
 
 As a second test set, we consider a bunch of small examples...
 
-The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 16GB RAM, running Windows 10 x64 with SSD. The measurements are shown in figure \ref{timings}. The measured time corresponds to the average of 10 runs, where . The startup time of JVM are not included. The standard-deviation for the test cases was negligible.
+The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 16GB RAM, running Windows 10 x64 with SSD. The measurements are shown in Figure \ref{timings}. The measured time corresponds to the average of 10 runs, where . The startup time of JVM are not included. The standard-deviation for the test cases was negligible.
 
 \begin{longtable}{ | p{0.4\textwidth} | p{0.2\textwidth}| p{0.2\textwidth} | p{0.2\textwidth}|}
 \hline
