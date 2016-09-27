@@ -217,58 +217,79 @@ A second ghost operation \textit{package} \(A \wand B \) calculates a suitable f
 
 The implementation of the quantified field permissions support depends on the verifier used. We first summarise how quantified field permissions are supported in the verification generator Carbon, and then explain the approach for symbolic execution, as presented in the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. 
 
-The supported shape of quantified field permission expression is defined as:
+The currently supported shape of quantified field permission expression is defined as:
 
 \begin{equation}
 \mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))
 \end{equation}
 
-The Boolean expression \(c(x)\) denotes a condition, under which a set of fields, defined by the reference-typed expression \(e(x)\) and the field \(f\), gain the permission amount expressed in the permission-typed expression \(p(x)\).
+The Boolean expression \(c(x)\) denotes a condition, under which a set of fields, defined by the reference-typed expression \(e(x)\) and the field \(f\), gain the permission amount expressed in the permission-typed expression \(p(x)\). An example of a quantified field permission is displayed in Figure \ref{qfExample}.
+
+\begin{figure}[h]
+  \centering
+\begin{lstlisting}
+field f: Int
+
+method m3(r: Ref, xs:Seq[Ref])
+requires r in xs
+requires forall x: Ref :: x in xs ==> acc(x.f)
+{
+    r.f := 4
+}
+\end{lstlisting}
+\caption[quantified field permission example example]
+   {Quantified field permission example. By inhaling the permission to the field \(f\) for all references in the set \textit{xs}, we gain the permission necessary to se a new value for the field \(r.f\).}
+\label{qfExample}
+\end{figure}
 
 \subsubsection{Verification Condition Generation and Quantified Field Permissions}
 \label{cgqf}
-Since field permissions are represented using maps, it is sufficient to introduce a new translation for inhaling and exhaling quantified field permissions. Reading or writing to a field is done as before. 
+In Carbon, field permissions are represented in the map \textit{Mask}. Inhaling a field permission \(x.f\) updates the permission map for the specified location denoted by \textit{Mask}\((x, f)\) and assumes  that the reference pointing to the field is non-null. In order to support quantified field permissions, it is therefore sufficient to introduce new translations for inhaling and exhaling quantified field permissions, which update the permission map \textit{Mask} for the denoted set of fields.
+Inhaling and Exhaling field permissions, as well as reading or writing to a field is done as before.
 
 \paragraph{Inhaling a Quantified Field Permission: }
-Inhaling a field permission \(x.f\) updates the permission map for the specified location denoted by \textbf{Mask}\((x, f)\) and assumes  that the reference pointing to the field is non-null. In order to frame the quantifier \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\), we create a new map at the beginning of the translation, which replaces the current map after completing the inhale operation. The permission amount of the new map needs to be defined for both updated and unaffected locations and has to be triggered when evaluating any field access. This is only possible by expressing the quantifier from the perspective of a neutral location. This neutral location is defined as \(r\) for all quantifiers, where \(r.f\) is the field access of field \(f\). 
+In order to model the changes to the permission map \textit{Mask} as a bulk update, we create a new map \textit{qpMask} at the beginning of the translation, which replaces \textit{Mask} after completing the inhale operation. The permission amount of the new map needs to be defined for both updated and unaffected locations. This is done by translating the quantified field permission to several Boogie quantifiers. 
 
-In order to translate the quantified field permission, we introduce a inverse function \(e^{-1}\), which maps the locations to the corresponding value x of type \(T\). Using the inverse function we can check, whether a location is altered by the quantifier by evaluating the condition as \(c(e^{-1}(r))\). The gained permission is equal to \(p(e^{-1}(r))\). 
-The introduction of the inverse function enforces, that the expression \(e(x)\) has to be injective. When inhaling a quantified field permission, the injectivity of \(e(x)\) is assumed along with the property, that all references affected by the quantifier are non-null.
+Potentiall, the assumption defining the values of the permission mask could be defined as \textbf{assume} \(\forall x:T :: \{?\}\ c(x) \Rightarrow qpMask[e(x), f] = Mask[e(x), f] + p(x)\), where the expression within the curly brackets represents the trigger, which allows this property for a specific value \(x'\) of type \(T\) to be available to the Boogie verifier. In Boogie, a trigger has to contain the quantifier variable and cannot only consist of a variable itself. The type of expressions allowed as a trigger is restricted as well. In order to trigger the permission update for all Mask accesses \(qpMask[r, f] \), this expression should be the trigger of the given expression, but is not a valid since  \(qpMask[r, f] \) does not contain the quantifier variable \(x\). 
+In order to use this trigger, we express the same property for all references \(r\), which results in an assumption of the following form: \textbf{assume} \(\forall r:Ref :: \{qpMask[r, f]\} \dots \Rightarrow qpMask[r, f] = Mask[r, f] + p(\dots)\).
+
+In order to translate the quantified field permission, we introduce an inverse function \(e^{-1}\), which maps a location \(r\) to the corresponding value of the original quantifier variable \(x\) of type \(T\). Using the inverse function we can check, whether a location is altered by the quantifier by evaluating the condition as \(c(e^{-1}(r))\). The gained permission is equal to \(p(e^{-1}(r))\). 
+The introduction of the inverse function requires, that the expression \(e(x)\) has to be injective. When inhaling a quantified field permission, the injectivity of \(e(x)\) is assumed along with the property, that all references affected by the quantifier are non-null.
 
 The exact translation can be seen in table \ref{qfconditionInhale}.
 
 %carbon inhale quantified field. Frame?
 \begin{longtable}{| p{1\textwidth} |}
 \hline
-\textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \) \{\\
-\ident Let \textit{qpMask} be a new Mask\\
+\textbf{inhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x).f, p(x)) \longmapsto\)\\
+\ident Let qpMask be a new Mask\\
 \ident \textbf{havoc} qpMask \\
 \ident \underline{c} \(:= eval(c)\)\\
 \ident \underline{e} \(:= eval(e)\)\\
 \ident \underline{p} \(:= eval(p)\)\\
 \\
+\ident \textit{/* assert e(x) is injective */} \\
+\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
 \ident \textbf{assume } \( \forall x:T ::\{e(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
-\ident \textbf{assume\ } \( \forall r:Ref ::\{e^{-1}(r)\}\ c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
+\ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* all receiver is non-null */} \\
 \ident \textbf{assume } \( \forall x:T ::\{\}\ \underline{c}(x)  \Rightarrow \underline{e}(x)) != null \) \\
 \\
-\ident \textit{/* assume e(x) is injective */} \\
-\ident \textbf{assume\ }\(\forall y_1: T, y_2:T ::\{\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
-\\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{e^{-1}(r)\}\) \\
-\ident  \ident \ident \ident \ident \(c(e(r)) \Rightarrow qpMask(r, f) = Mask(r.f) - Mask(e^{-1}(r), f)\)\\
+\ident \textbf{assume\ } \(\forall r:\textit{Ref} :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\ \{e^{-1}(r)\}\) \\
+\ident  \ident \ident \ident \ident \(\underline{c}(e(r)) \Rightarrow\) qpMask\((r, f) = \)Mask\((r.f) + p(e^{-1}(r))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\{ e^{-1}(r)\}\)\\
-\ident  \ident \ident \ident \ident \( \ \neg c(e^{-1}(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
-\ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\) \\
-\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
+\ident \textbf{assume\ } \(\forall r:\)\textit{Ref}\( :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\{ e^{-1}(r)\}\)\\
+\ident  \ident \ident \ident \ident \( \ \neg \underline{c}(e^{-1}(r)) \Rightarrow\) qpMask\((r, f) = \) Mask\((r, f) \)\\
+\ident \textbf{assume\ } \(\forall o:\)\textit{Object}\(, f_o:\)\textit{Field}\( :: \{\)Mask\((o, f) \}\ \{\)qpMask\((o, f)\}\) \\
+\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow\) qpMask\((o , f) = \) Mask\((o,f) \)\\
 \ident Mask \(:=\) qpMask \\
-\}\\ \hline
+\\ \hline
 \caption[carbon quantified field inhale]
    {Translating quantified field inhale operation. The triggers are for the given forall expressions are included within curly brackets. For the expressions assuming non-null receivers and injectivity, there were no triggers defined. In our adaption of this approach, we included triggers for both assumptions. The updated translation can be seen in in Figure \ref{qfconditionInhaleExtended}.}
 \label{qfconditionInhale}
@@ -281,58 +302,58 @@ The translation is displayed in table \ref{qfconditionExhale}.
 %carbon exhale quantified field
 \begin{longtable}{| p{1\textwidth} |}
 \hline
-\textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \) \{\\
-\ident Let \textit{qpMask} be a new Mask   \\
+\textbf{exhale forall } \(x:T :: c(x) \Rightarrow  acc(e(x), p(x)) \longmapsto \) \\
+\ident Let qpMask be a new Mask   \\
 \ident \textbf{havoc} qpMask \\
 \ident \underline{c} \(:= eval(c)\)\\
 \ident \underline{e} \(:= eval(e)\)\\
 \ident \underline{p} \(:= eval(p)\)\\
 \\
 \ident \textit{/* assert e(x) is injective */} \\
-\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\}\  y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
+\ident \textbf{assert\ }\(\forall y_1: T, y_2:T ::\{\}\ y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow \underline{e}(y_1) = \underline{e}(y_2)\) \\
 \\
 \ident \textit{/* sufficient permission */} \\
-\ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow Mask(e(x), f) \geq \underline{p}(x)\)\\
+\ident \textbf{assert\ } \(\forall x:T ::\{\}\ c(x) \Rightarrow \)Mask\((e(x), f) \geq \underline{p}(x)\)\\
 \\
 \ident \textit{/* Inverse Assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(T \rightarrow \) \textit{Ref} \\
-\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\  \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
-\ident \textbf{assume\ } \( \forall r:Ref ::\{inv(r)\}\  c(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
+\ident \textbf{assume } \( \forall x:T ::\{e(x)\}\ \underline{c}(x)  \Rightarrow e^{-1}(\underline{e}(x)) = x \) \\
+\ident \textbf{assume\ } \( \forall r:\textit{Ref} ::\{e^{-1}(r)\}\ \underline{c}(e^{-1}(r))  \Rightarrow \underline{e}(e^{-1}(r)) = r \) \\
 \\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{qpMask(r, f)\}\ \{ inv(r)\}\) \\
-\ident  \ident \ident \ident \ident  \(c(inv(r)) \Rightarrow qpMask(r, f) = Mask(r.f) - Mask(inv(r), f)\)\\
+\ident \textbf{assume\ } \(\forall r:\textit{Ref} :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\ \{e^{-1}(r)\}\) \\
+\ident  \ident \ident \ident \ident \(\underline{c}(e(r)) \Rightarrow\) qpMask\((r, f) = \)Mask\((r.f) - p(e^{-1}(r))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall r:Ref :: \{Mask(r, f)\}\ \{ qpMask(r, f)\}\ \{ inv(r)\}\) \\
-\ident  \ident \ident \ident \ident  \(\neg c(inv(r)) \Rightarrow qpMask(r, f) = \) Mask \((r, f) \)\\
-\ident \textbf{assume\ } \(\forall o:Object, f_o:Field :: \{Mask(o, f) \}\ \{ qpMask(o, f)\}\) \\
-\ident  \ident \ident \ident \ident \( (f_o != f) \Rightarrow qpMask(o , f) = \) Mask \((o,f) \)\\
+\ident \textbf{assume\ } \(\forall r:\)\textit{Ref}\( :: \{\)Mask\((r, f)\}\ \{\)qpMask\((r, f)\}\{ e^{-1}(r)\}\)\\
+\ident  \ident \ident \ident \ident \( \ \neg \underline{c}(e^{-1}(r)) \Rightarrow\) qpMask\((r, f) = \) Mask\((r, f) \)\\
+\ident \textbf{assume\ } \(\forall o:\)\textit{Object}\(, f_o:\)\textit{Field}\( :: \{\)Mask\((o, f) \}\ \{\)qpMask\((o, f)\}\) \\
+\ident  \ident \ident \ident \ident \((f_o != f) \Rightarrow\) qpMask\((o , f) = \) Mask\((o,f) \)\\
 \ident Mask \(:=\) qpMask \\
-\}\\ \hline
+\\ \hline
 \caption[carbon quantified field exhale]
-   {Translating quantified field exhale operation. The missing triggers are added in the adapted translation, which is defined in Table \ref{qfconditionExhaleExtended}.} %expand description: check, remove....
+   {Translating quantified field exhale operation. The missing triggers indicated by empty braces are added in the adapted translation, which is defined in Table \ref{qfconditionExhaleExtended}.}
 \label{qfconditionExhale}
 \end{longtable}
 
 \subsubsection{Symbolic Execution Rules for Quantified Field Permissions}
 \label{seqfp}
-The solution presented in  \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc} introduces a new type of heap chunk, new rules for inhaling and exhaling single and quantified field permissions, as well as for reading and writing these field values.
+A solution to supporting quantified field permissions in symbolic execution is presented in  \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The approach presented introduces a new type of heap chunk, new rules for inhaling and exhaling single and quantified field permissions, as well as for reading and writing to these field values.
 
 %Quantified Field Chunk
 \paragraph{Quantified Field Chunk:}
-The permission amount and value of a field is stored in the heap as a field chunk. A field chunk \((r.f) \mapsto [v, p]\) is a defined for a specific reference \(r\) and a field \(f\), which is mapped to the location value \(v\) and the permission amount \(p\). The value \(v\) has the same type as the field \(f\), whereas \(p\) is a permission. 
+The permission amount and value of a unquantified field is stored in the heap as a field chunk. A field chunk \((r.f) \mapsto [v, p]\) is a defined for a symbolic reference \(r\) and a field \(f\), which is mapped to the location value \(v\) and the permission amount \(p\). The value \(v\) has the same type as the field \(f\), whereas \(p\) is a permission. 
 
-To support quantified field chunks, a new type of chunk needed to be defined, which can hold a potentially unbounded set of references and values. A straightforward implementation of the expression \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) would result in an heap of the form  \((x, f) \mapsto [v(x), c(x) ? p(x) : 0)]\), where x is of type T. The new chunk is defined for all values of type T. The permission and value are depending on x. The value \(v\) is changed to a value map storing the known values of the set. In order to evaluate the permission or value of a location \(r.f\), we would be forced to check for each chunk, whether there exists an \(x\), where the \(e(x)\) evaluates to the reference \(r\).
+To support quantified field chunks, a new type of chunk needed to be defined, which can hold a potentially unbounded set of references and values. A straightforward implementation of the expression \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\) would result in an heap chunk of the form  \((x, f) \mapsto [v(x), c(x) ? p(x) : 0)]\), where x is of type T. The new chunk is defined for all values of type T. The permission and value depend on x. The value \(v\) is changed to a value map storing the known values of the set. In order to evaluate the permission or value of a location \(r.f\), we would be forced to check for each chunk, whether there exists an \(x\), where \(e(x)\) evaluates to the reference \(r\).
 
-To avoid this, the representation is adapted to the form \((r.f) \mapsto [v(r), p(r)]\), where \(r\) is of type Ref. To translate the initial permission expression to that form, we again define an inverse function, which maps a location reference to the value of the corresponding quantifier variable of Type T. The resulting quantified field chunk has the form \(r.f \mapsto [v(r), c(e^{-1}(r)) ? p(e^{-1}(r)) : 0)]\). %The domain of a quantified chunk is the set of fields r', where p(r' > 0). 
+To avoid such existential queries, the representation is adapted to the form \((r.f) \mapsto [v(r), p(r)]\), where \(r\) is of type Ref. To translate the initial permission expression to that form, we again define an inverse function, which maps a location reference to the value of the corresponding quantifier variable of Type T. The resulting quantified field chunk has the form \(r.f \mapsto [v(r), c(e^{-1}(r)) ? p(e^{-1}(r)) : 0)]\). %The domain of a quantified chunk is the set of fields r', where p(r' > 0). 
 
-To guarantee the existence of an inverse function, it is necessary that the expression \(e(x)\) must be injective. This does not restrict the data structures that can be handled by this approach as long as correctly specified.
+To guarantee the existence of an inverse function, it is necessary that the expression \(e(x)\) must be injective. This does not restrict the data structures that can be handled by this approach as long as correctly specified.\cite{isc}
 
 %Inhale
 \paragraph{Quantified Inhaling:}
 %Given a symbolic heap, a path condition and a quantified field permission, inhaling returns an updated heap and path conditions.
-Inhaling a quantified field expression generates a new quantified heap chunk. In order to do that, we first evaluate the condition, receiver expression and permission expression. As a next step we introduce the inverse function of the expression \(e(x)\), which is only partially defined for the values where the given condition \(c(x)\) applies. The inverse function is defined by adding two conditions to the path conditions. As a last step, we generate the new quantified heap chunk using the previously defined inverse function  and add it to the heap. The value map is initially empty.
+Inhaling a quantified field expression generates a new quantified heap chunk. In order to do that, we first evaluate the condition, receiver expression and permission expression. As a next step we introduce the inverse function of the expression \(e(x)\), which is only partially defined for the values where the given condition \(c(x)\) applies. The inverse function is defined by adding two conditions to the path conditions. As a last step, we generate the new quantified heap chunk using the previously defined inverse function  and add it to the heap. As for inhaling a field permission, the value of the field location is initially unknown. The value map, storing the values of the references included in the quantified field chunk, is initially empty.
 
 The symbolic execution rules are presented in Table \ref{qfInhale}.
 
@@ -356,13 +377,13 @@ The symbolic execution rules are presented in Table \ref{qfInhale}.
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Inhaling a Quantified Field Permission]
-   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in Figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y). These expressions may not be considered well-formed otherwise.}
+   {These symbolic execution rules for inhaling a quantified field permission correspond to the rules defined in Figure 2 of the paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc}. The function \textbf{eval} is used to evaluate an expression in the given symbolic state. An evaluation may update the path variables, and yields the resulting symbolic expression. The symbolic value of the evaluated condition is added temporarily to the path condition for the evaluation of e(y) and p(y).}
 \label{qfInhale}
 \end{longtable}
 
 %Exhale
 \paragraph{Quantified Exhaling:}
-Exhaling again starts by evaluating the condition, receiver expression and permission expression. As seen for verification condition generation, we check the injectivity of the receiver expression. Afterwards we introduce the inverse function same as before and proceed to remove the permission from the heap.
+Exhaling again starts by evaluating the condition, receiver expression and permission expression. As seen for verification condition generation, we check the injectivity of the receiver expression. Afterwards, we introduce the inverse function as before and proceed to remove the permission from the heap.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -372,7 +393,7 @@ Exhaling again starts by evaluating the condition, receiver expression and permi
 \\
 \ident \textit{/* Check injectivity of receiver expression */} \\
 \ident Let \(\ y_1, y_2\ \) be a fresh symbolic constants of Type \(\ T\) \\
-\ident \(\mathbf{check} \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\) \\
+\ident \(\mathbf{check } \pi_4 \models \underline{c}(y_1) \land \underline{c}(y_2) \land \underline{e}(y_1) = \underline{e}(y_2) \Rightarrow  y_1 = y_2\) \\
 \\
 \ident \textit{/* Introduce inverse function (as above) */}\\
 \ident [\dots] \\
@@ -419,7 +440,7 @@ The symbolic execution rules for the function \textit{remove} are displayed in T
 \end{longtable}
 
 \paragraph{Inhale Field Permission:}
-In order to use the remove function defined, we need to adapt the approach for inhaling and exhaling unquantified field permissions. In Silicon, inhaling a single field permission is only adapted if the field occurs in a quantifier. In that case, inhaling a field permission produces a quantified field permission as well. To express the field permission \(acc(e.f, p)\)  as its equivalent quantified chunk, we define its permission as \(p\) if  the reference is equal to the location specified by the expression \(e\). The updated inhaling rules are presented in Table \ref{sqfInhale}.
+In order to use the remove function defined, we need to adapt the approach for inhaling and exhaling unquantified field permissions. In Silicon, inhaling a single field permission is only adapted if the field is ever used in a quantified field permission. In that case, inhaling a field permission produces a quantified field permission as well. To express the field permission \(acc(e.f, p)\)  as its equivalent quantified chunk, we define its permission as \(p\) if  the reference is equal to the location specified by the expression \(e\). The updated inhaling rules are presented in Table \ref{sqfInhale}.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -456,7 +477,7 @@ Exhaling a single field permission \(acc(e.f, p)\) is handled similarly. If a fi
 \end{longtable}
 
 \paragraph{Evaluation}
-The value information of a quantified field chunk is stored in its value map \(v\). It represents a under-specified total function and is defined per reference. A symbolic heap may consist of multiple chunks for the same field. To provide a simple translation for field-lookups, the function summarise was introduced. Given a field \(f\), it generates a value map, containing the values for all references defined, as well as the permission expressions held per location. Path conditions are not considered. The symbolic execution rules are defined in Table \ref{qfSum}.
+The value information of a quantified field chunk is stored in its value map \(v\). It represents a under-specified total function and is defined per reference. A symbolic heap may consist of multiple chunks for the same field. To provide a simple translation for field-lookups, the function summarise was introduced. Given a field \(f\), it generates a value map, containing the values for all references defined, as well as the permission expressions held per location. Summarise only works with the defined heap chunks and does not consider path conditions. The symbolic execution rules are defined in Table \ref{qfSum}.
 
 \begin{longtable}{| p{1\textwidth} | }
 \hline
@@ -483,9 +504,9 @@ If we evaluate the value of a single field location \(e.f\), we first evaluate t
 \hline
 \textbf{eval}\(\ (h_0, \pi_0, e.f) \) \{\\
 \ident \textbf{var } \((\pi_1, \underline{e}) :=\) \textbf{eval} \(h_0, \pi_0, e)\) \\
-\ident \textbf{var } \((v, def, perm) :=\) \textbf{summarise} \(h_0, f)\) \\
+\ident \textbf{var } \((v, \) \textit{def}\(,\) \textit{perm}\() :=\) \textbf{summarise} \(h_0, f)\) \\
 \ident \textbf{check } \(\pi_1 \models 0 < perm(\underline{e}) \) \\
-\ident \textbf{return } \(\pi_1 \cup def, v(\underline{e})\) \\
+\ident \textbf{return } \(\pi_1 \cup\) \textit{def}\(, v(\underline{e})\) \\
 \}\\ 
 \hline
 \caption[Evaluate Field Permission]
@@ -494,7 +515,7 @@ If we evaluate the value of a single field location \(e.f\), we first evaluate t
 \end{longtable}
 
 \paragraph{Field Write}
-A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the access permission of the field \(e_1.f\), followed by inhaling the equality of \(e_1.f\) and \(e_2\). Exhaling the permission of the field checks whether we possess sufficient permission to write to the field. The rules are presented in Table \ref{qfWrite}
+A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the access permission of the field \(e_1.f\), followed by inhaling the equality of \(e_1.f\) and \(e_2\). Exhaling the permission of the field checks whether we possess sufficient permission to write to the field. The rules are presented in Table \ref{qfWrite}.
 
 \begin{longtable}{| p{1\textwidth} | }
 \hline
@@ -508,10 +529,6 @@ A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the 
    {These symbolic execution rules for desugaring a field write for a quantified field.}
 \label{qfWrite}
 \end{longtable}
-
-%triggering
-%framing
-
 
 \section{Generalising Quantified Field Permissions in Carbon}
 \label{genField}
@@ -1275,5 +1292,15 @@ As future work, the implementation could be extended to include quantified magic
 \bibliography{report}
 \newpage
 \section{Appendix}
+\subsection{A}
+This section holds various small changes done for the impementations in Silicon and Carbon.
 
+\subsection{wilcards within Quantified permissions in Carbon}
+When inhaling, the wildcard is assumed to be some arbitrary value. 
+
+When exhaling, we define constrain the value of the wildcard to be smaller than the permission held for all locations. The implementation was not checking whether we posess any permission to the set of fields indicated by the quantifier. As a consequence, it was possible to exhale permissions to using wildcards in all cases.
+
+As a correction, we added a check, asserting that for all locations satisfying the condition, we possess a strictly positive permission amoung.
+
+\subsection{B}
 \end{document}
