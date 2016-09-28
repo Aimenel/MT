@@ -762,6 +762,7 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \end{longtable}
 
 \subsection{Symbolic Execution}
+\label{SymbolicPredicates}
 In this section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution.
 
 \subsubsection{Symbolic Heap Representation} \label{shr}
@@ -1010,12 +1011,12 @@ Quantified unfolding
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
 \label{qmw}
-As mentioned in chapter , a magic wand is represented using its footprint. A footprint may consist of multiple arguments. As a consequence, the definition for the inverse function and the injectivity test is defined analgous to quantified predicate permissions.
+A magic wand instance is represented by a set of arguments, which depend on the syntactic structure and the parameters of the magic wand. As for predicates, the number of arguments and their type may vary for each magic wand instance, but is the same for a specific magic wand. As a consequence, the definition for the inverse function and the injectivity test is defined analogous to quantified predicate permissions.
 
-In verification condition generation, a magic wand instance is represented in the form wand\( (f_1, \dots, f_n) \), where \(f_i\) represents the ith argument of the magic wand's footprint. The definitions for inhaling and exhaling a quantified magic wand is done exaclty as in Figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with wand, and the argument expressions correspond to the footprints.
-Again, there is no need to adapt the implementations of \textit{apply} and \textit{package}.
+In verification condition generation, a magic wand instance is represented in the form \textit{wand}\((a_1, \dots, a_n)\), where \textit{wand} is a function returning the wand location for the given arguments and \(a_i\) represents the ith argument of the magic wand representation. Contrary to predicates, \textit{wand} is used for all magic wands regardless of difference in structure. For example, the permission of the magic wand \(x\ in\ xs \wand acc(x.f)\) is represented as Mask[\(null, wand(Seq\#Contains(xs, x), x, FullPerm)\)], where the arguments stand for \(x\ in\ xs\), \(x.f\), and the implicit full permission of \(x.f\).
+The translation of inhaling and exhaling a quantified magic wand is therefore done analogously to the translation in Figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with the function \textit{wand} and the argument expressions correspond to the quantified magic wand argument. As for the ghost operations of predicates, there is no need to adapt the the translations of \textit{apply} and \textit{package}.
 
-As for symblolic execution rules, the same principle applies.%Go on?
+Also the symbolic execution rules of quantified predicates can be reused for quantified magic wand permissions. Same as for quantified predicates, we need to introduce a new type of heap chunk for magic wands, define functions for inhaling and exhaling quantified and unquantified magic wands. If the functions \textit{apply} and \textit{package} are not desugared into inhaling and exhaling expressions, which is the case in Silicon, we need to adapt the implementations of both ghost operations to evaluate the permissions and values using the defined quantified magic wand chunks. Contrary to quantified field and predicate permissions, we cannot filter the quantified magic wand chunks by predicate or field names. We have to analyse the type of the arguments to decide which magic wands should be included when summarising values or removing permissions. The adaption of the implementations of section \ref{SymbolicPredicates} should however be straightforward.
 
 %Combinations of Quantifiers
 \section{Combinations of Quantifiers}
@@ -1336,5 +1337,6 @@ When exhaling, we define constrain the value of the wildcard to be smaller than 
 As a correction, we added a check, asserting that for all locations satisfying the condition, we possess a strictly positive permission amoung.
 
 \subsection{B}
+%examples
 \includepdf[pages={1}]{declaration.pdf}
 \end{document}
