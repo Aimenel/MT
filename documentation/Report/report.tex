@@ -644,7 +644,7 @@ As the general form of a quantified predicate permission we consider the followi
 \begin{equation}
  \mathbf{forall} \   x:T :: c(x) \Rightarrow acc(pred(e_1 (x),…,e_n (x)), p(x)), 
 \end{equation}
-where \(c(x)\) is a Boolean expression, \textit{pred} a predicate name, \(\ e_i(x)\) denotes the expression conforming to the type of the ith arguments of the predicate \textit{pred} and \(p(x)\) permission expression. Introducing this new form allows us to express permission to more complex structures such as a set of lists.
+where \(c(x)\) is a Boolean expression, \textit{pred} a predicate name, \(\ e_i(x)\) denotes the expression conforming to the type of the ith arguments of the predicate \textit{pred}. The permission is denoted by the permission-based expression \(p(x)\). Introducing this new form allows us to express permissions to more complex structures such as a set of lists.
 
 To explain the adaption needed for the implementation, we discuss the answers to the following questions \cite{isc}:
 \begin{enumerate}
@@ -660,27 +660,26 @@ For Verification Condition Generation, these questions are answered in the follo
 
 \subsection{Verification Condition Generation for Quantified Predicate Permissions}
 \label{vcgPredicate}
-In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. The permissions held to a predicate location of the predicate \textit{pred} with n arguments is stored at \textit{Mask}\([null,\) \textit{pred'}\((arg_1, \dots, arg_n)]\), where \textit{pred'} represents a function returning a field locationof the mask for the predicate \textit{pred} with given arguments. Similar to the approach for quantified predicate permissions, we introduce a translation for inhaling and exhaling quantified predicate permissions. There are no adaptions needed for the definition of the program state, nor do we need to change anything concerning the evaluation of  permissions. The implementation of the operations unfold, fold and unfolding does not have to be changed. 
+In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. The permissions held to a predicate location of the predicate \textit{pred} with n arguments is stored at \textit{Mask}\([null,\) \textit{pred'}\((arg_1, \dots, arg_n)]\), where \textit{pred'} represents a function returning a location, in Carbon a so-called field location, of the mask for the predicate \textit{pred} with given arguments. Similar to the approach for quantified predicate permissions, we introduce a translation for inhaling and exhaling quantified predicate permissions. There are no adaptions needed for the definition of the program state, nor do we need to change anything concerning the evaluation of  permissions. The implementation of the operations unfold, fold and unfolding does not have to be changed. 
 
-Framing is done as for quantified field permissions by defining a new map, which later replaces the current map. For this map, we define all known permissions. For the locations included within a quantifier, the permission is increased or decreased by the designated amount. For the independent locations the permission remains unchanged. These include all field and magic wand locations, predicate instances of different predicate names, as well as predicate instances not satisfying the quantifier condition.
+As for both translations of inhaling and exhaling quantified field permissions, we introduce a new map, which later replaces the current map. For this map, we define the permissions relative to the previous map. For the locations included within a quantifier, the permission is increased or decreased by the designated amount. For the independent locations the permission remains unchanged. These include all field and magic wand locations, predicate instances of different predicate names, as well as predicate instances not satisfying the quantifier condition. The values of these locations are preserved, since neither inhaling nor exhaling quantified permissions change the values of the given locations.
 
-To translate a quantified predicate permission, we reuse the solution presented for quantified fields. As for quantified field permissions, we evaluate the arguments, introduce an inverse function, assume injectivity and define the updated permissions for the newly created map holding the permissions for predicates. We need, however to redefine the definition of the inverse function and injectivity.
+To translate a quantified predicate permission, we generalise the solution presented for quantified fields. As for quantified field permissions, we evaluate the arguments, assert injectivity, introduce an inverse function  and define the updated permissions for the newly created map. We need, however, to redefine the definition of the inverse function and the injectivity criterion.
 
-A predicate location is defined by a predicate name and a set of arguments. As before we wish to define the updated locations using a quantified neutral location. Whereas the approach for quantified field permission uses a fix reference \(r\) to find the general location of a field, a neutral predicate depends on a set of arguments. The number of arguments and their type may differ for each predicate. To express the neutral locations, we declare a set of neutral arguments \(arg_1, \dots, arg_n\) for each quantified predicate definition. 
+A predicate location is defined by a predicate name and a set of arguments. As before we wish to define the updated locations by quantifying over all predicates with predicate name \(pred\) and arbitrary arguments. Whereas for quantified field permission, we quantify over a generic receiver to define the general location of a field, a predicate depends on a set of arguments. The number of arguments and their type may differ for each predicate.
 
-In order to translate the given permission for that location, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to map a general location to the variable used in the original quantified permission expression. A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not necessary to include it as an argument of the inverse function. The adapted definition of the inverse function is only depending on the arguments themselves.
+In order to translate the given permission to that location, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to map a general location to the variable used in the original quantified permission expression. A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not necessary to include it as an argument of the inverse function. The adapted definition of the inverse function only depends on the arguments themselves.
 
 As before, given the arguments of the predicate, the new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier. The adapted inverse function is defined as:\\
 
 \begin{tabularx}{1\textwidth}{ X}
 \textbf{function }\(e^{-1}(a_1:A_1, \dots, a_n:A_n): T\) \\
-\(\forall \ x:T :: c(x) \Rightarrow e^{-1}(e_1 (x),…,e_n (x))==x \) \\
-\( \forall \ a_1:A_1,\dots, a_n:A_n ::  c(e^{-1}(a_1, …,a_n )) \Rightarrow e_i (e^{-1}(a_1,\dots, a_n )) = a_i \) \\
+\(\forall \ x:T :: c(x) \Rightarrow e^{-1}(e_1 (x),\dots,e_n (x))==x \) \\
+\( \forall \ a_1:A_1,\dots, a_n:A_n ::  c(e^{-1}(a_1, \dots,a_n )) \Rightarrow e_i (e^{-1}(a_1,\dots, a_n )) = a_i \),\\
 \end{tabularx}\\
+where \(a_i\) represents the value ith argument of the predicate and \(A_i\) its type. The inverse function is, as before, is defined as a total function, but models a partial function since we only provide additional information if the condition is satisfied.
 
-The inverse function is, as before, a partial function defined only for values where the condition of the original quantifier applies.
-
-Similar to quantified field permissions, we have to restrict the allowed expression terms as a result to guarantee the existence of the defined inverse function. The location expressed by the quantifier has to be injective.This is guaranteed if at least one argument expression differs for all two values of the quantifier variable. This property can be expressed by the following equation:\\
+Similar to quantified field permissions, we have to restrict the allowed expressions for \(e_1(x), \dots, e_n(x)\) in order to guarantee the existence of the inverse function. The location expressed by the quantifier has to be injective. This is guaranteed if at least one argument expression differs for any two values of the quantifier variable. This property can be expressed by the following equation:\\
 
 \begin{tabularx}{1\textwidth}{ X}
  \(\forall x_1:T, x_2: T :: c(x_1) \land c(x_2) \land (e_1(x_1) = e_1(x_2)) \land \dots \land  (e_n(x_1) = e_n(x_2)) \Rightarrow \) \\
@@ -757,7 +756,7 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified predicate exhale]
-   {Translation of exhaling a quantified predicate permission.The corresponding translation for quantified field permissions is displayed in Table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the general location and the inverse function.}
+   {Translation of exhaling a quantified predicate permission. The corresponding translation for quantified field permissions is displayed in Table \ref{qfconditionExhale}. The translation differs in the definition of the injectivity check, the general location and the inverse function.}
 \label{qpcExhale}
 \end{longtable}
 
