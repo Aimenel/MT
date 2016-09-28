@@ -656,11 +656,11 @@ To explain the adaption needed for the implementation, we discuss the answers to
 \end{enumerate}
 %Example
 
-For Verification Condition Generation, these questions are answered in the following section \ref{vcgPredicate}. For Symbolic Execution, the first problem is handled in section \ref{shr}, the second and third in section \ref{qpInhaleSec} to \ref{pInhaleExhaleSec}. The fourth and fifth question is answered  in section \ref{qppVals} to section \ref{qpUnfolding}.
+For Verification Condition Generation, these questions are answered in the following section \ref{vcgPredicate}. For Symbolic Execution, the first problem is handled in section \ref{shr}, the second and third in section \ref{qpInhaleSec} to \ref{pInhaleExhaleSec}. The fourth and fifth questions are answered  in section \ref{qppVals} to \ref{SecFold}.
 
 \subsection{Verification Condition Generation for Quantified Predicate Permissions}
 \label{vcgPredicate}
-In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. The permissions held to a predicate location of the predicate \textit{pred} with n arguments is stored at \textit{Mask}\([null, pred(arg_1, \dots, arg_n)]\). Similar to the approach for quantified predicate permissions, we introduce a translation for inhaling and exhaling quantified predicate permissions. There are no adaptions needed for the definition of the program state, nor do we need to change anything concerning the evaluation of  permissions. The implementation of the operations unfold, fold and unfolding does not have to be changed. 
+In Carbon, the permission held for a predicate instance is stored in the map \textit{Mask}. The permissions held to a predicate location of the predicate \textit{pred} with n arguments is stored at \textit{Mask}\([null,\) \textit{pred'}\((arg_1, \dots, arg_n)]\), where \textit{pred'} represents a function returning a field locationof the mask for the predicate \textit{pred} with given arguments. Similar to the approach for quantified predicate permissions, we introduce a translation for inhaling and exhaling quantified predicate permissions. There are no adaptions needed for the definition of the program state, nor do we need to change anything concerning the evaluation of  permissions. The implementation of the operations unfold, fold and unfolding does not have to be changed. 
 
 Framing is done as for quantified field permissions by defining a new map, which later replaces the current map. For this map, we define all known permissions. For the locations included within a quantifier, the permission is increased or decreased by the designated amount. For the independent locations the permission remains unchanged. These include all field and magic wand locations, predicate instances of different predicate names, as well as predicate instances not satisfying the quantifier condition.
 
@@ -964,7 +964,7 @@ When unfolding a quantified predicate, we first evaluate the arguments of the pr
 
 %overview
 \subsubsection{Fold} 
-\label{qFold}
+\label{SecFold}
 As mentioned in the background, folding a predicate exchanges the permission of the body with the permission to the predicate which is being folded. It creates a new quantified predicate chunk. The predicate chunk contains the values of the permissions held by the predicate body previous to folding it, which is called a snapshot of the predicate.
 
 When folding a quantified predicate, we first generate a snapshot based on the current heap. Exhaling the snapshot is equivalent to exhaling the body of the predicate, where the values the body relies on are revealed in the snapshot. Exhaling the snapshot is checking that enough permission is held to fold the predicate. After exhaling the predicate body, we generate a new quantified predicate chunk, where the value map is defined for the given predicate and maps to the generated snapshot.
