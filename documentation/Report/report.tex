@@ -1309,19 +1309,20 @@ The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 
 \begin{longtable}{ | p{0.4\textwidth} | p{0.2\textwidth}| p{0.2\textwidth} | p{0.2\textwidth}|}
 \hline
 {\bf Program} & {\bf Size (LOC)} & {\bf Carbon RT(s) }&  {\bf Silicon RT (s)} \\ \hline
-qpprod\_arity.sil & 10 & 0.064371456 & 0.069341163\\
-spprod\_arity.sil & 10 & 0.0732 & 0.0646 \\
-spexhale\_arity.sil & 10 & 0.081065043 & 0.070611248 \\
-unfold\_arity1.sil & 10 & 0.065181772 & 0.077571721\\
-unfolding\_arity.sil & 10 & 0.066782732 & 0.066116363\\
-fold\_arity1.sil & 10 & 0.077852261 & 0.076475604 \\
+qpprod\_arity.sil & 44 & 0.064371456 & 0.069341163\\
+spprod\_arity.sil & 48 & 0.0732 & 0.0646 \\
+spexhale\_arity.sil & 80 & 0.081065043 & 0.070611248 \\
+unfold\_arity1.sil & 106 & 0.065181772 & 0.077571721\\
+unfolding\_arity.sil & 48 & 0.066782732 & 0.066116363\\
+fold\_arity1.sil & 108 & 0.077852261 & 0.076475604 \\
 \hline
-basic test cases & 10 & 0.862776483 & 0.858428924
+basic test cases & 641 & 0.862776483 & 0.858428924
 \\
 \hline
-list.sil & 10 & 0.065749266 & 0.070307273\\
-list\_false.sil & 10 & 0.073028554 & 0.073980765\\
-two\_blocks\_array.sil & 10 & 0.068092332 & 0.072460161\\
+list.sil & 61 & 0.065749266 & 0.070307273\\
+list\_false.sil & 63 & 0.073028554 & 0.073980765\\
+two\_blocks\_array.sil & 92 & 0.068092332 & 0.072460161\\
+\hline combinations & 388 & 0 & 0\\
 \hline \hline
 total & 10 & 1.846154741 & 1.857979419\\
 \hline
