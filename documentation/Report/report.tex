@@ -47,9 +47,9 @@
 \newcommand{\wand}{\ensuremath{\mathbin{-\!\!*}}}
 
 \begin{titlepage}
-	\includegraphics[width=6cm]{eth_logo_black.pdf}
-	\vfill
+
 	\centering
+
     \vspace*{1cm}
     \Huge\textbf{Generalised Verification for Quantified Permissions}
 
@@ -65,13 +65,15 @@
     Department of Computer Science \\
     ETH Zurich
     
-    \vspace*{0.5cm}
+
     \today
     
 	\vfill
 
     \raggedright
-   	
+   	\includegraphics[width=6cm]{eth_logo_black.pdf}
+    
+
 \end{titlepage}
 
 %\maketitle
@@ -151,7 +153,7 @@ domain IArray {
 }
 \end{lstlisting}
 \caption[predicate example]
-   {Example of a domain. The domain\(IArray\) represents an integer array and defines two function: \(loc\) returns the location of a specific value given an array and index, \(len\) the length of the given array. In addition to these functions, the axiom \(len\_nonneg\) defines that the length of an array has to be positive. The value of a location corresponds to \(loc(a, i).val\).}
+   {Example of a domain. The domain \(IArray\) represents an integer array and defines two function: \(loc\) returns the location of a specific value given an array and index, \(len\) the length of the given array. In addition to these functions, the axiom \(len\_nonneg\) defines that the length of an array has to be positive. The value of a location corresponds to \(loc(a, i).val\).}
 \label{domainExample}
 \end{figure}
 
@@ -232,7 +234,7 @@ As for the concept of predicates, automatically reasoning about magic wands has 
 }
 where \(\longmapsto\) represents a translation or rewriting step.
 
-A second ghost operation \textit{package} \(A \wand B \) calculates a suitable footprint for the instance \(A \wand B \). The operation fails, if no such footprint can be found. Otherwise, the foorprint is then exchanged for a new wand instance.
+A second ghost operation \textit{package} \(A \wand B \) calculates a suitable footprint for the instance \(A \wand B \). The operation fails, if no such footprint can be found. Otherwise, the footprint is then exchanged for a new wand instance.
 
 %Quantified Field Permissions
 \subsection{Quantified Field Permissions}
@@ -273,7 +275,7 @@ Inhaling and Exhaling field permissions, as well as reading or writing to a fiel
 \paragraph{Inhaling a Quantified Field Permission: }
 In order to model the changes to the permission map \textit{Mask} as a bulk update, we create a new map \textit{qpMask} at the beginning of the translation, which replaces \textit{Mask} after completing the inhale operation. The permission amount of the new map needs to be defined for both updated and unaffected locations. This is done by translating the quantified field permission to several Boogie quantifiers. 
 
-Potentiall, the assumption defining the values of the permission mask could be defined as \textbf{assume} \(\forall x:T :: \{?\}\ c(x) \Rightarrow qpMask[e(x), f] = Mask[e(x), f] + p(x)\), where the expression within the curly brackets represents the trigger, which allows this property for a specific value \(x'\) of type \(T\) to be available to the Boogie verifier. In Boogie, a trigger has to contain the quantifier variable and cannot only consist of a variable itself. The type of expressions allowed as a trigger is restricted as well. In order to trigger the permission update for all Mask accesses \(qpMask[r, f] \), this expression should be the trigger of the given expression, but is not a valid since  \(qpMask[r, f] \) does not contain the quantifier variable \(x\). 
+Potentially, the assumption defining the values of the permission mask could be defined as \textbf{assume} \(\forall x:T :: \{?\}\ c(x) \Rightarrow qpMask[e(x), f] = Mask[e(x), f] + p(x)\), where the expression within the curly brackets represents the trigger, which allows this property for a specific value \(x'\) of type \(T\) to be available to the Boogie verifier. In Boogie, a trigger has to contain the quantifier variable and cannot only consist of a variable itself. The type of expressions allowed as a trigger is restricted as well. In order to trigger the permission update for all Mask accesses \(qpMask[r, f] \), this expression should be the trigger of the given expression, but is not a valid since  \(qpMask[r, f] \) does not contain the quantifier variable \(x\). 
 In order to use this trigger, we express the same property for all references \(r\), which results in an assumption of the following form: \textbf{assume} \(\forall r:Ref :: \{qpMask[r, f]\} \dots \Rightarrow qpMask[r, f] = Mask[r, f] + p(\dots)\).
 
 In order to translate the quantified field permission, we introduce an inverse function \(e^{-1}\), which maps a location \(r\) to the corresponding value of the original quantifier variable \(x\) of type \(T\). Using the inverse function we can check, whether a location is altered by the quantifier by evaluating the condition as \(c(e^{-1}(r))\). The gained permission is equal to \(p(e^{-1}(r))\). 
@@ -555,11 +557,11 @@ A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the 
 
 \section{Generalising Quantified Field Permissions in Carbon}
 \label{genField}
-The approach presented in Section \ref{cgqf} did not include any triggers for some expressions. In such a case, triggers are generated by the underlying tools. To make the behavior of quantified expressions more reliable and to possibly reduce unnecessary invocations, we introduced triggers for these expressions. 
+The approach presented in Section \ref{cgqf} did not include any triggers for some expressions. In such a case, triggers are generated by the underlying tools. To make the behaviour of quantified expressions more reliable and to possibly reduce unnecessary invocations, we introduced triggers for these expressions. 
 
 The non-null assumption should be triggered for all locations. It would therefore be a possibility to reformulate the assumption as a quantifier over all references. It is however sufficient to use the same trigger as the first inverse assumption, namely \(e(x)\), since this expression will be triggered via the second inverse function when accessing a field location. An injectivity assertion, on the other hand, doesn't need to be be triggered. For that purpose, we introduce a new function \textit{triggerFun}, which takes the quantifier variable as an argument.
 
-As another extension, we added the support for user-given triggers on quantified permissions, which were previously not supported. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add a user-given trigger to the expression defining the permissions of the map \textit{Mask}, since the user cannot define a more general trigger than \textit{Mask}\((o , f)\)  and \(qpMask\)\((o , f) \). Other triggers are necessary to ensure the desired behavior of quantified permissions. The most obvious example would be the trigger for the second inverse assumption, which has to be triggered for each invocation of the inverse function. Instead of replacing the previously generated triggers, we add a user-given trigger to certain expressions. A user-given trigger without alterations can only be added to expressions with the same quantifier variable type as the original quantifier. Since all other quantified assumptions are already triggered by the inverse function, there is no advantage in adding a modified trigger in these cases. We add the user-given function to the first inverse assumption as well as the non-null assumption and check for sufficient permission.
+As another extension, we added the support for user-given triggers on quantified permissions, which were previously not supported. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add a user-given trigger to the expression defining the permissions of the map \textit{Mask}, since the user cannot define a more general trigger than \textit{Mask}\((o , f)\)  and \(qpMask\)\((o , f) \). Other triggers are necessary to ensure the desired behaviour of quantified permissions. The most obvious example would be the trigger for the second inverse assumption, which has to be triggered for each invocation of the inverse function. Instead of replacing the previously generated triggers, we add a user-given trigger to certain expressions. A user-given trigger without alterations can only be added to expressions with the same quantifier variable type as the original quantifier. Since all other quantified assumptions are already triggered by the inverse function, there is no advantage in adding a modified trigger in these cases. We add the user-given function to the first inverse assumption as well as the non-null assumption and check for sufficient permission.
 
 If no user-given trigger is defined, we reuse the trigger-generation function provided for pure quantifiers in order to provide additional triggers. This can be helpful in cases where \(e(x)\) does not constitute a valid trigger. Since Carbon does not support nested quantifiers, the generation of triggers was adapted to not define additional variables. The adapted triggers are displayed in Table \ref{qfconditionInhaleExtended} and \ref{qfconditionExhaleExtended}.
 
@@ -958,7 +960,7 @@ In order to summarise the values and permission of a single predicate, we adapt 
 \ident \textbf{return} \((v, def, perm)\) \\
 \}\\ \hline
 \caption[Summarise Quantified Field Permissions]
-   {Symbolic execution rules for summarsing quantified predicate permissions. The function is adapted from the summarise function for quantified field permission depicted in Table \ref{qfSum}}
+   {Symbolic execution rules for summarising quantified predicate permissions. The function is adapted from the summarise function for quantified field permission depicted in Table \ref{qfSum}}
 \label{qpSum}
 \end{longtable}
 
@@ -1374,7 +1376,7 @@ As an additional change, any occurrence of the inverse function in the original 
 
 \subsection{Rewriting Nested Quantified Permissions}
 \label{rewritesN}
-If a quantified expression includes a second nested quantifier, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does alter the semantic meaning of the expression, but allows us to reuse the approach mentioned above. The newly generated expression should trigger for the same expressions designated by the triggers defined in the original quantifiers. A trigger also has to contain all of the defined quantifier variables. In order to guarantee that behavior, we define the trigger of the rewritten expression as the Cartesian product of the original triggers.
+If a quantified expression includes a second nested quantifier, we rewrite that expression to the newly established base cases by moving the additional variables to the front. This does alter the semantic meaning of the expression, but allows us to reuse the approach mentioned above. The newly generated expression should trigger for the same expressions designated by the triggers defined in the original quantifiers. A trigger also has to contain all of the defined quantifier variables. In order to guarantee that behaviour, we define the trigger of the rewritten expression as the Cartesian product of the original triggers.
 
 The rewriting rules are displayed in Table \ref{nRewriting}.
 
