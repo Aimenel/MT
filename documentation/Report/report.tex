@@ -699,22 +699,32 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \ident \(\underline{e_n} := eval(e_n)\)\\
 \ident \underline{p} \(:= eval(p)\)\\
 \\
-\ident \textit{/* Inverse Assumptions */} \\
+\ident \textit{/* Injectivity assertion */} \\
+\ident \textbf{assert\ }\(\forall y_1:T, y_2:T\ \{triggerFun(y_1), triggerFun(y_2)\} : y_1  \ne y_2 \land  \)\\
+\ident \ident \(\underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
+\\
+\ident \textit{/* Inverse assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(A_1, \dots, A_n \rightarrow T\) \\
-\ident \textbf{assume } \( \forall x:T :: \{\} \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \textbf{assume } \( \forall x:T :: \{pred(\underline{e_1}(x), \dots, \underline{e_2}(x)\} \{trs)\}\ \underline{c}(x)  \) \\
+\ident \ident \(\Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ \underline{c}(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
 \ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
 \\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1:T, y_2:T\ \{\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
-\\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{qpMask[null, pred(a_1, \dots, a_n)\}\) \\
-\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)]  +  p(inv(a_1, \dots, a_n))\)\\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{\)qpMask[\(null, pred(a_1, \dots, a_n)\)]\(\}\) \\
+\ident \ident \(\{\)Mask[\(null, pred(a_1, \dots, a_n)\)]\(\}\{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n)) \) \\
+\ident \ident \( \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] =\) \\
+\ident \ident Mask[\(null, pred(a_1, \dots, a_n)\)] \( +  \ p(e^{-1}(a_1, \dots, a_n))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)] \)\\
-\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{qpMask[o, f]\} \{Mask[o, f]\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \) \\
+\ident \ident \(\{\)qpMask[\(null, pred(a_1, \dots, a_n)\)]\(\}(\{\)Mask[\(null, pred(a_1, \dots, a_n)\)]\(\} \) \\
+\ident \ident \(\{e^{-1}(a_1, \dots, a_n)\}\ \neg \underline{c}(e^{-1}(a_1, \dots, a_n)) \Rightarrow \)\\ 
+\ident \ident qpMask[\(null, pred(a_1, \dots, a_n)\)]\( == \)Mask[\(null, pred(a_1, \dots, a_n)\)] \\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{\)qpMask[\(o, f\)]\(\} \{\)Mask[\(o, f\)]\(\}\) \\
+\ident \ident \((obj \ne null \land \neg isPredicateField(f)\ \land \) \\
+\ident \ident \(\mathit{predicateId}(f) != \mathit{predicateId}(pred)) \Rightarrow \) \\
+\ident \ident \textit{perm}\((o.f , a_n)) = \) \textbf{old} \((\mathit{perm}(o.f)) \)\\
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified predicate inhale]
@@ -722,7 +732,7 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \label{qpcInhale}
 \end{longtable}
 
-%carbon exhale quantified field
+%carbon exhale quantified predicate
 \begin{longtable}{| p{1\textwidth} |}
 \hline
 \textbf{exhale}\(\ (h_0, \pi_0,  \mathbf{forall\ } x:T :: c(x) \Rightarrow  acc(pred(e_1 (x),\dots,e_n (x)), p(x)) \) \{\\
@@ -733,26 +743,36 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \ident \(\underline{e_n} := eval(e_n)\)\\
 \ident \underline{p} \(:= eval(p)\)\\
 \\
-\ident \textit{/* Injectivity Assumption */} \\
-\ident \textbf{assume\ }\(\forall y_1:T, y_2:T\ \{\} : y_1  \ne y_2 \land \underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
+\ident \textit{/* Injectivity assertion */} \\
+\ident \textbf{assert\ }\(\forall y_1:T, y_2:T\ \{triggerFun(y_1), triggerFun(y_2)\} : y_1  \ne y_2 \land  \)\\
+\ident \ident \(\underline{c}(y_1) \land \underline{c}(y_2) \Rightarrow ((\underline{e_1}(y_1) \ne \underline{e_1}(y_2)) \lor \dots \lor  (\underline{e_n}(y_1) \ne \underline{e_n}(y_2))\) \\
 \\
 \ident \textit{/* sufficient permission assertion*/} \\
-\ident \textbf{assume\ } \(\forall x:T :: \{\} c(x) \Rightarrow Mask[null, pred(\underline{e_1}(x), \dots, \underline{e_n}(x))]  \geq \underline{p}(x)\)\\
+\ident \textbf{assume\ } \(\forall x:T :: \ \{pred(\underline{e_1}(x), \dots, \underline{e_2}(x)\} \{trs)\}\ \underline{c}(x) \Rightarrow \) \\
+\ident \ident Mask[\(null, pred(\underline{e_1}(x), \dots, \underline{e_n}(x))\)] \( \geq \underline{p}(x)\)\\
 \\
-\ident \textit{/* Inverse Assumptions */} \\
+\ident \textit{/* Inverse assumptions */} \\
 \ident Let  \(e^{-1}\)  be a fresh function of type  \(A_1, \dots, A_n \rightarrow T\) \\
-\ident \textbf{assume } \( \forall x:T :: \{\} \underline{c}(x)  \Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
-\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
+\ident \textbf{assume } \( \forall x:T :: \{pred(\underline{e_1}(x), \dots, \underline{e_2}(x)\} \{trs)\}\ \underline{c}(x)  \) \\
+\ident \ident \(\Rightarrow e^{-1}(\underline{e_1}(x), \dots, \underline{e_n}(x)) = x \}  \) \\
+\ident \textbf{assume\ } \( \forall a_1: A_1, \dots, a_n: A_n :: \{e^{-1}(a_1, \dots, a_n)\} \ \underline{c}(e^{-1}(a_1, \dots, a_n))  \Rightarrow \) \\
 \ident \ident \ident \(\underline{e_1}(e^{-1}(a_1, \dots, a_n)) = a_1 \ \& \ \dots \ \& \  \underline{e_n}(e^{-1}(a_1, \dots, a_n))= a_n \} \) \\
 \\
 \ident \textit{/* define updated permission */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{qpMask[null, pred(a_1, \dots, a_n)\}\) \\
-\(\{Mask[null, pred(a_1, \dots, a_n)\}\{e^{-1}(a_1, \dots, a_n)\} \ c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] \) \\
-\( == Mask[null, pred(a_1, \dots, a_n)]  -  p(inv(a_1, \dots, a_n))\)\\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{\)qpMask[\(null, pred(a_1, \dots, a_n)\)]\(\}\) \\
+\ident \ident \(\{\)Mask[\(null, pred(a_1, \dots, a_n)\)]\(\}\{e^{-1}(a_1, \dots, a_n)\} \ c(e^{-1}(a_1, \dots, a_n)) \) \\
+\ident \ident \( \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] =\) \\
+\ident \ident Mask[\(null, pred(a_1, \dots, a_n)\)] \( -  \ p(e^{-1}(a_1, \dots, a_n))\)\\
 \\
 \ident \textit{/* define independent permissions */} \\
-\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \{tr\}\ \neg c(inv(a_1, \dots, a_n)) \Rightarrow qpMask[null, pred(a_1, \dots, a_n)] == Mask[null, pred(a_1, \dots, a_n)] \)\\
-\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{qpMask[o, f]\} \{Mask[o, f]\}\ (obj \ne null \land \neg isPredicateField(f) \land predicateId(f) != predicateId(pred)) \Rightarrow perm(o.f , a_n)) = \) \textbf{old} \((perm(o.f)) \)\\
+\ident \textbf{assume\ } \(\forall a_1:A_1, \dots,  a_n:A_N :: \) \\
+\ident \ident \(\{\)qpMask[\(null, pred(a_1, \dots, a_n)\)]\(\}(\{\)Mask[\(null, pred(a_1, \dots, a_n)\)]\(\} \) \\
+\ident \ident \(\{e^{-1}(a_1, \dots, a_n)\}\ \neg \underline{c}(e^{-1}(a_1, \dots, a_n)) \Rightarrow \)\\ 
+\ident \ident qpMask[\(null, pred(a_1, \dots, a_n)\)]\( == \)Mask[\(null, pred(a_1, \dots, a_n)\)] \\
+\ident \textbf{assume\ } \(\forall o:Ref, f:Field :: \{\)qpMask[\(o, f\)]\(\} \{\)Mask[\(o, f\)]\(\}\) \\
+\ident \ident \((obj \ne null \land \neg isPredicateField(f)\ \land \) \\
+\ident \ident \(\mathit{predicateId}(f) != \mathit{predicateId}(pred)) \Rightarrow \) \\
+\ident \ident \textit{perm}\((o.f , a_n)) = \) \textbf{old} \((\mathit{perm}(o.f)) \)\\
 \ident Mask \(:=\) qpMask \\
 \}\\ \hline
 \caption[carbon quantified predicate exhale]
