@@ -780,12 +780,14 @@ The adapted translations of inhaling and exhaling quantified predicate permissio
 \label{qpcExhale}
 \end{longtable}
 
+There is no need to adapt the translation of \textit{fold}, \textit{fold} and \textit{fold}. Permissions to a predicate permission can evaluated by looking up the permission amount  in the map \textit{Mask} as before.
+
 \subsection{Symbolic Execution}
 \label{SymbolicPredicates}
-In this section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution.
+In this Section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution. Again the main difference between the adapted approach and its original are that we adapt the definition of the inverse function and injectivity constraint. Additionally, we introduce a new type of heap chunk in order to store permissions and snapshot values of a potentially unbounded number of predicate instances.
 
 \subsubsection{Symbolic Heap Representation} \label{shr}
-In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbound set of predicate instance of the same predicate simultaneously. In the previous design, a quantified field chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
+In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbounded set of predicate instance of the same predicate simultaneously. In the previous design, a quantified field chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
 For quantified predicate chunks we use the predicate name instead of the field as identification and express the permission and value definition by defining a set of general arguments. The general form of such a heap chunk conforms to:
 \begin{equation}
 	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [v(\mathrm{arg_1, ..., arg_n}), p(\mathrm{arg_1, ..., arg_n}))],
