@@ -17,6 +17,7 @@
 \usepackage{longtable}
 \usepackage{silver}
 \usepackage{pdfpages}
+\usepackage{hyperref}
 
 \lstset{
          numbers=left,
@@ -84,28 +85,28 @@
 \clearpage
 \pagenumbering{arabic}% Arabic page numbers (and reset to 1)
 \section{Abstract}
-The verification infrastructure Viper supports a quantified field permission of the form \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\). The quantifier may only depend on one variable and express permissions to a set of fields. Viper includes two verifiers. Carbon is based on verification condition generation, Silicon on Smallfoot-style symbolic execution. In this report, we present approaches for both types of verifiers to generalise the support of quantified permissions. We present a solution to adapt the approaches for quantified field permissions to support quantified predicate and magic wands permissions, as well as nested quantifiers. We also present rewriting rules for combining pure and permission-based quantifiers.We implemented both quantified predicate permissions and combinations of quantifiers in Carbon and Silicon.
+The verification infrastructure Viper supports quantified field permission of the form \(\mathbf{forall\ } x:T :: c(x) \Rightarrow acc(e(x).f, p(x))\). The quantifier may only depend on one variable and express permissions to a set of fields. Viper includes two verifiers. Carbon is based on verification condition generation, Silicon on Smallfoot-style symbolic execution. In this report, we present approaches for both types of verifiers to generalise the support for quantified permissions. We present a solution to adapt the approaches for quantified field permissions to support quantified predicate and magic wands permissions, as well as nested quantifiers. We also present rewriting rules for combining pure and permission-based quantifiers.We implemented both quantified predicate permissions and combinations of quantifiers by conjunction and implication in Carbon and Silicon.
 
 \section{Introduction}
 %viper implementation?
-In order to verify heap-manipulating programs as shared mutable data structures, separation logic \cite{reynolds2002separation} and implicit frames \cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
-Dynamic data structures may depend on a potentially unbound set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be defined as a predicate, for example a random access pattern in an array.
+In order to verify heap-manipulating programs with shared mutable data structures, separation logic \cite{reynolds2002separation} and implicit frames \cite{smans2009implicit} associate an access permission with each memory location to reason about its state. 
+Dynamic data structures may depend on a potentially unbounded set of memory locations. One way to define access rights to such a structure is to introduce recursive predicates defining the permissions needed. There are however access patterns which cannot be conveniently defined as a predicate, for example a random access pattern in an array.
 
-The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc} presented a solution to define permissions to a set of field locations regardless of the access pattern. It introduces a quantified heap chunk to hold the permissions and symbolic values for a set of fields simultaneously, as well as symbolic rules to evaluate specific values, remove and add permissions to quantified field chunks.
+The paper \textit{Automatic Verification of Iterated Separating Conjunctions using Symbolic Execution} \cite{isc} presented a solution to define permissions to a set of field locations regardless of the access pattern. It introduces new representation for storing the permission and symbolic values for a set of fields simultaneously, as well as symbolic rules to evaluate specific values, remove and add permissions to quantified field chunks.
 
-The approach was implemented in the verification infrastructure Viper \cite{viper}. It includes several front-ends which translate the given programs to Viper's intermediate language. These programs can be verified with Silicon, which is based on symbolic execution, and Carbon, a verification condition generator. There are currently three features of Viper handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structures and quantified field permissions \cite{isc} allows us to express point-wise specifications. 
+The approach was implemented in the verification infrastructure Viper \cite{viper}. It includes several front-ends which translate the given programs to Viper's intermediate language. These programs can be verified with Silicon, which is based on symbolic execution, and Carbon, a verification condition generator. There are currently three features of Viper handling unbounded heap structures. Using predicates, it can handle data structures which are recursively defined, magic wands \cite{magicwand} can be used to keep track of partial data structures and quantified field permissions \cite{isc} allow us to express data structures ignorant of the way they are later accessed. 
 
-This project presents the generalisation of that approach. Currently, the approach mentioned supports quantified permissions of the following structure:
+This project presents the generalisation of the current support of quantified permissions implemented in Viper. Currently, the approach mentioned supports quantified permissions of the following structure:
 \begin{equation}
-	\mathbf{forall} \; x:T :: c(x) ==>\mathbf{acc}( e(x).f, p(x) ) ,
+	\mathbf{forall} \; x:T :: c(x) \Rightarrow \mathbf{acc}( e(x).f, p(x) ) ,
 \end{equation}
 where {\it f} is a field of any type, {\it c(x)} is  a Boolean expression,{\it e(x)} an injective reference-typed expression and {\it p(x)} a permission expression.
 
-As a generalisation, we introduce new approaches adapting this solution to allow quantified permissions for predicates \cite{predicates} and magic wands \cite{magicwand} instead of fields, as well as  nested quantifiers. Further we present rewriting rules to get rid of the fix structure of quantified field permissions, allowing expressions not defining a condition \(c(x)\) and combinations of pure and permission-based quantifiers.
+As a generalisation, we introduce new approaches adapting this solution to allow quantified permissions for predicates \cite{predicates} and magic wands \cite{magicwand} instead of fields, as well as  nested quantifiers. Further we present rewriting rules to get rid of the fixed structure of quantified field permissions, allowing expressions not defining a condition \(c(x)\) and combinations of pure and permission-based quantifiers.
 
 \subsection{Outline}
 
-The following section presents an overview to Viper, including the approach integrated for quantified field permissions. Section \ref{genField} shows some minor changes for the treatment of quantified field permissions, including the support of user-given triggers in Carbon. The adapted approach for quantified predicate permissions is introduced in section \ref{qp}, the approach for quantified magic wand permissions in section \ref{qmw}. The rewriting rules for combinations of quantifiers are defined in section \ref{rewriting}. The adaption necessary to support nested quantifiers is described in section \ref{nq}. Finally, we evaluate the performance of the implementation of quantified predicates and combinations of predicates in section \ref{evaluation}. Additionally, the appendix holds a few examples of programs newly supported in Viper.
+The following section presents an overview of Viper, including the approach integrated for quantified field permissions. Section \ref{genField} shows some changes to the treatment of quantified field permissions, including the support of user-given triggers in Carbon. The adapted approach for quantified predicate permissions is introduced in Section \ref{qp}, the approach for quantified magic wand permissions in Section \ref{qmw}. The rewriting rules for combinations of quantifiers are defined in Section \ref{rewriting}. The adaption necessary to support nested quantifiers is described in Section \ref{nq}. Finally, we evaluate the performance of the implementation of quantified predicates and combinations of predicates in Section \ref{evaluation}. Additionally, the appendix holds a few examples of programs newly supported in Viper.
 
 %to be continued
 
@@ -554,11 +555,11 @@ A field write \(e_1.f := e_2\) is desugared into exhaling and then inhaling the 
 
 \section{Generalising Quantified Field Permissions in Carbon}
 \label{genField}
-The approach presented in section \ref{cgqf} did not include any triggers for some expressions. In such a case, triggers are generated by the underlying tools. To make the behavior of quantified expressions more reliable and to possibly reduce unnecessary invocations, we introduced triggers for these expressions. 
+The approach presented in Section \ref{cgqf} did not include any triggers for some expressions. In such a case, triggers are generated by the underlying tools. To make the behavior of quantified expressions more reliable and to possibly reduce unnecessary invocations, we introduced triggers for these expressions. 
 
-The non-null assumption should be triggered for all locations. It would therefore be a possibility to reformulate the assumption as a quantifier over all references. It is however sufficient to use the same trigger as the first inverse assumption, namely \(e(x)\), since this expression will be triggered via the second inverse function when accessing a field location. An injectivity assertion on the other hand, doesn't need to be be triggered. For that purpose, we introduce a new function \textit{triggerFun}, which takes the quantifier variable as an argument.
+The non-null assumption should be triggered for all locations. It would therefore be a possibility to reformulate the assumption as a quantifier over all references. It is however sufficient to use the same trigger as the first inverse assumption, namely \(e(x)\), since this expression will be triggered via the second inverse function when accessing a field location. An injectivity assertion, on the other hand, doesn't need to be be triggered. For that purpose, we introduce a new function \textit{triggerFun}, which takes the quantifier variable as an argument.
 
-As another extension, we added the support for user-given triggers on quantified permissions, which were previously not supported. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add a user-given trigger to the expression defining the permissions of the map \textit{Mask}, since the user cannot define a more general trigger than \textit{Mask}\((o , f)\)  and \(qpMask\)\((o , f) \). Other triggers are necessary to ensure the desired behavior of quantified permissions. The most obvious example would be the trigger for the second inverse assumption, which has to be triggered for each invocation of the inverse function. Instead of replacing the previously generated triggers, we add a user-given trigger to certain expressions. A user-given trigger without alterations can only be added to expression with the same quantifier variable type as the original quantifier. Since all other quantified assumption are already triggered by the inverse function, there is no advantage in adding a modified trigger in these cases. We add the user-given function to the first inverse assumption as well as the non-null assumption and check for sufficient permission.
+As another extension, we added the support for user-given triggers on quantified permissions, which were previously not supported. Most generated expressions should trigger independently of that trigger. For example, it is unnecessary to add a user-given trigger to the expression defining the permissions of the map \textit{Mask}, since the user cannot define a more general trigger than \textit{Mask}\((o , f)\)  and \(qpMask\)\((o , f) \). Other triggers are necessary to ensure the desired behavior of quantified permissions. The most obvious example would be the trigger for the second inverse assumption, which has to be triggered for each invocation of the inverse function. Instead of replacing the previously generated triggers, we add a user-given trigger to certain expressions. A user-given trigger without alterations can only be added to expressions with the same quantifier variable type as the original quantifier. Since all other quantified assumptions are already triggered by the inverse function, there is no advantage in adding a modified trigger in these cases. We add the user-given function to the first inverse assumption as well as the non-null assumption and check for sufficient permission.
 
 If no user-given trigger is defined, we reuse the trigger-generation function provided for pure quantifiers in order to provide additional triggers. This can be helpful in cases where \(e(x)\) does not constitute a valid trigger. Since Carbon does not support nested quantifiers, the generation of triggers was adapted to not define additional variables. The adapted triggers are displayed in Table \ref{qfconditionInhaleExtended} and \ref{qfconditionExhaleExtended}.
 
@@ -596,7 +597,7 @@ If no user-given trigger is defined, we reuse the trigger-generation function pr
 \ident Mask \(:=\) qpMask \\
 \hline
 \caption[carbon quantified field inhale]
-   {The expressions generated during a quantified inhale are adapted for the first inverse function assumption, as well as the non-null assumption. Both expressions are triggered on the expression denoting the receiver and the user-given or automatically generated triggers. The translation are adapted from Table \ref{qfconditionInhale}.}
+   {The expressions generated during a quantified inhale are adapted for the first inverse function assumption and the non-null assumption. Both expressions are triggered on the expression denoting the receiver and the user-given or automatically generated triggers. The translation is adapted from Table \ref{qfconditionInhale}.}
 \label{qfconditionInhaleExtended}
 \end{longtable}
 
@@ -634,7 +635,7 @@ If no user-given trigger is defined, we reuse the trigger-generation function pr
 \ident Mask \(:=\) qpMask \\
 \hline
 \caption[carbon quantified field exhale]
-   {Translating quantified field exhale operation. \(trs\) is a place-holder for the user-defined triggers or if no trigger was given, a set of auto-generated triggers as used for pure quantifiers.The triggers were adapted for both assertions, as well as the first inverse assumptions. The translation is an adaption of Table \ref{qfconditionExhale}.}
+   {Translating quantified field exhale operation. \(trs\) is a place-holder for the user-defined triggers or if no trigger was given, a set of auto-generated triggers. The triggers were adapted for both assertions and the first inverse assumptions. The translation is an adaption of Table \ref{qfconditionExhale}.}
 \label{qfconditionExhaleExtended}
 \end{longtable}
 
@@ -657,7 +658,7 @@ To explain the adaption needed for the implementation, we discuss the answers to
 \end{enumerate}
 %Example
 
-For Verification Condition Generation, these questions are answered in the following section \ref{vcgPredicate}. For Symbolic Execution, the first problem is handled in section \ref{shr}, the second and third in section \ref{qpInhaleSec} to \ref{pInhaleExhaleSec}. The fourth and fifth questions are answered  in section \ref{qppVals} to \ref{SecFold}.
+For Verification Condition Generation, these questions are answered in the following Section \ref{vcgPredicate}. For Symbolic Execution, the first problem is handled in Section \ref{shr}, the second and third in Section \ref{qpInhaleSec} to \ref{pInhaleExhaleSec}. The fourth and fifth questions are answered  in Section \ref{qppVals} to \ref{SecFold}.
 
 \subsection{Verification Condition Generation for Quantified Predicate Permissions}
 \label{vcgPredicate}
@@ -669,7 +670,7 @@ To translate a quantified predicate permission, we generalise the solution prese
 
 A predicate location is defined by a predicate name and a set of arguments. As before we wish to define the updated locations by quantifying over all predicates with predicate name \(pred\) and arbitrary arguments. Whereas for quantified field permission, we quantify over a generic receiver to define the general location of a field, a predicate depends on a set of arguments. The number of arguments and their type may differ for each predicate.
 
-In order to translate the given permission to that location, we need to adapt the definition of the inverse function presented in section \ref{qf}. As before, the inverse function is used to map a general location to the variable used in the original quantified permission expression. A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not necessary to include it as an argument of the inverse function. The adapted definition of the inverse function only depends on the arguments themselves.
+In order to translate the given permission to that location, we need to adapt the definition of the inverse function presented in Section \ref{qf}. As before, the inverse function is used to map a general location to the variable used in the original quantified permission expression. A new inverse function is defined for each expression. Since the predicate name is however independent of the quantifier variable, it is not necessary to include it as an argument of the inverse function. The adapted definition of the inverse function only depends on the arguments themselves.
 
 As before, given the arguments of the predicate, the new inverse function returns a value of type \(T\) corresponding to the original value of the quantifier. The adapted inverse function is defined as:\\
 
@@ -785,24 +786,24 @@ There is no need to adapt the translation of \textit{fold}, \textit{fold} and \t
 
 \subsection{Symbolic Execution}
 \label{SymbolicPredicates}
-In this Section, we adapt the solution for quantified field permissions described in section \ref{seqfp} to support quantified predicate permissions for symbolic execution. Again the main difference between the adapted approach and its original are that we adapt the definition of the inverse function and injectivity constraint. Additionally, we introduce a new type of heap chunk in order to store permissions and snapshot values of a potentially unbounded number of predicate instances.
+In this Section, we adapt the solution for quantified field permissions described in Section \ref{seqfp} to support quantified predicate permissions for symbolic execution. Again the main difference between the adapted approach and its original are that we adapt the definition of the inverse function and injectivity constraint. Additionally, we introduce a new type of heap chunk in order to store permissions and snapshot values of a potentially unbounded number of predicate instances.
 
 \subsubsection{Symbolic Heap Representation} \label{shr}
-In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbounded set of predicate instance of the same predicate simultaneously. In the previous design, a quantified field chunk is defined by the field name, where permission and value are defined using a general location reference \(r\).
-For quantified predicate chunks we use the predicate name instead of the field as identification and express the permission and value definition by defining a set of general arguments. The general form of such a heap chunk conforms to:
+In order to reason about quantified predicate permissions, it is necessary to define a symbolic heap representation for a potentially unbounded set of predicate instance of the same predicate simultaneously. In the previous design, a quantified field chunk is defined by the field name, where permission and value are defined using a general location reference \(r\), which serves as a placeholder for the respective field location receivers.
+For quantified predicate chunks we use the predicate name instead of the field as identification and express the permission and value definition by defining a set of general arguments, which again serve as a placeholder for the actual arguments of each predicate instance. The general form of such a heap chunk conforms to:
 \begin{equation}
 	\mathbf{pred}(\mathrm{arg_1, ..., arg_n})\mapsto [v(\mathrm{arg_1, ..., arg_n}), p(\mathrm{arg_1, ..., arg_n}))],
 \end{equation}
-where \textit{v} represents a value map, where a value represent the snapshot of that predicate instantiation.
+where \textit{v} represents a value map, where a value represents the snapshot of the corresponding predicate instance.
 Given the new definition of quantified predicate heap chunks, we define the \(inhale\) and \(exhale\) operations for quantified predicate permissions.
 
 \subsubsection{Quantified Inhaling} 
 \label{qpInhaleSec}
-The adapted symbolic execution rules for a inhaling a quantified permission can be seen in Figure \ref{qpInhale}. It differs in the definition of the inverse function, as well as the values of the value map.
+The adapted symbolic execution rules for a inhaling a quantified permission can be seen in Table \ref{qpInhale}. It differs from that in Table 4 in the definition of the inverse function, as well as the values of the value map.
 
 As before, inhaling a quantified predicate permission updates a given state and returns an updated heap and path condition. Similarly the quantified field expression, the condition, argument expressions and permission expression are evaluated as a first step.
 
-The inverse function is introduced analogous to a quantified field permission and further defined by adding two constraints to the path condition, defining its properties. The the cardinality of the inverse function may vary for different predicates, but is identical for the same predicate.
+The inverse function is introduced analogously to that for quantified field permission and further defined by adding two constraints to the path condition, defining its properties. The cardinality of the inverse function may vary for different predicates, but is identical for the same predicate.
 
 As a last step we introduce a value map, which is later used to keep track of the snapshot of predicate instantiations. These values are used during an unfold or unfolding.
 
@@ -832,7 +833,7 @@ As a last step we introduce a value map, which is later used to keep track of th
 \ident \textbf{return} \( (h_1, \pi_6) \) \\
 \}\\ \hline
 \caption[Inhaling a Quantified Predicate Permission]
-   {Symbolic execution rules for inhaling a quantified predicate permission. They refer to the rules for inhaling quantified field permissions of Figure \ref{qfInhale}. The declaration of the inverse function is updated as described before. The inverse function takes a set of predicate arguments and returns the value of the variable originally expressed in the quantifier. The type of the value map corresponds to the snapshot type of the predicate.}
+   {Symbolic execution rules for inhaling a quantified predicate permission. They adapt the rules for inhaling quantified field permissions given in Table \ref{qfInhale}. The declaration of the inverse function is updated as described before. The inverse function takes a set of predicate arguments and returns the value of the variable originally expressed in the quantifier. The type of the value map corresponds to the snapshot type of the predicate.}
 \label{qpInhale}
 \end{longtable}
 
@@ -899,7 +900,7 @@ The definition of removing permission from a quantified predicate is adapted as 
 
 \subsubsection{Inhaling and Exhaling Single Predicate Permission} 
 \label{pInhaleExhaleSec}
-In order to use the remove function defined, we again need to adapt the approach for inhaling and exhaling single predicate permissions. When inhaling, we define a quantified predicate chunk, where the permission is defined only if all arguments are identically to the input arguments. When exhaling a predicate permission, we define the needed permission the same way. Analogous for the implementation of quantified fields, silicon only adapts the inhaling and exhaling of single predicates, if the predicate is quantified at some point in the given program.
+In order to use the remove function defined, we again need to adapt the approach for inhaling and exhaling single predicate permissions. When inhaling, we define a quantified predicate chunk, where the permission is defined only if all arguments are identically to the input arguments. When exhaling a predicate permission, we define the needed permission the same way. Analogously to the implementation of quantified fields, Silicon only adapts the inhaling and exhaling of single predicates if the predicate is quantified at some point in the given program.
 
 \begin{longtable}{| p{1\textwidth} | } 
 \hline
@@ -927,17 +928,18 @@ In order to use the remove function defined, we again need to adapt the approach
 \ident [\dots] \\
 \\\
 \ident \textit{/* Remove Permissions */}\\
-\ident \( \mathbf{var\ } h_1 :=  remove(h_0, \pi_{n+1}, f, (\lambda a_1, \dots, a_n \cdot ((a_1 == \underline{e}_1) \ \&\&\ \dots \ \&\&\ (a_n == \underline{e}_n))\ ?\ \underline{p} : 0))  \) \\
+\ident \( \mathbf{var\ } h_1 :=  remove(h_0, \pi_{n+1}, f, \) \\
+\ident \ident \((\lambda a_1, \dots, a_n \cdot ((a_1 == \underline{e}_1) \ \&\&\ \dots \ \&\&\ (a_n == \underline{e}_n))\ ?\ \underline{p} : 0))  \) \\
 \ident \textbf{return} \( (h_1, \pi_{n+1}) \) \\
 \}\\ \hline
 \caption[Exhaling a Field Permission]
-   {Analogous for inhaling a predicate permission, the symbolic execution rules for exhaling a predicate permission are adapted, if the predicate is quantified at some point during the program. These rules correspond to the rules displayed for quantified field permission in Table \ref{sqfExhale}. The definition of the permission required is adapted to consider all arguments of the predicate.}
+   {Analogously to inhaling a predicate permission, the symbolic execution rules for exhaling a predicate permission are adapted if the predicate is quantified at some point during the program. These rules correspond to the rules displayed for quantified field permission in Table \ref{sqfExhale}. The definition of the permission required is adapted to consider all arguments of the predicate.}
 \label{sqpExhale}
 \end{longtable}
 
 \subsubsection{Treatment of Symbolic Values} 
 \label{qppVals}
-Predicates may modify symbolic values while unfolding and folding predicates. When working with quantified predicates, the unfold and fold operations need to be adapted. Unfolding a predicate can be desugared as before. As for exhaling and inhaling single predicates, the functions fold and unfold only need to be adapted for predicates which are quantified at some point during the program.
+Predicates may modify symbolic values using the ghost operations \textit{unfold} and \textit{fold}. When working with quantified predicates, the unfold and fold operations need to be adapted. Unfolding a predicate is desugared as before. As was the case for exhaling and inhaling single predicates, the functions fold and unfold only need to be adapted for predicates which are quantified at some point during the program.
 
 In order to summarise the values and permission of a single predicate, we adapt the summarise function presented for quantified field permission. The function walks through all quantified chunks of the given predicate, keeping track of the values and permissions held for all locations. The symbolic execution rules are displayed in Table \ref{qpSum}.
 
@@ -990,7 +992,7 @@ When unfolding a quantified predicate, we first evaluate the arguments of the pr
 \label{SecFold}
 As mentioned in the background, folding a predicate exchanges the permission of the body with the permission to the predicate which is being folded. It creates a new quantified predicate chunk. The predicate chunk contains the values of the permissions held by the predicate body previous to folding it, which is called a snapshot of the predicate.
 
-When folding a quantified predicate, we first generate a snapshot based on the current heap. Exhaling the snapshot is equivalent to exhaling the body of the predicate, where the values the body relies on are revealed in the snapshot. Exhaling the snapshot is checking that enough permission is held to fold the predicate. After exhaling the predicate body, we generate a new quantified predicate chunk, where the value map is defined for the given predicate and maps to the generated snapshot.
+When folding a quantified predicate, we first generate a snapshot based on the current heap. Exhaling the snapshot is equivalent to exhaling the body of the predicate, where the values the body relies on are revealed in the snapshot. Exhaling the snapshot is checking that enough permission is held to fold the predicate. After exhaling the predicate body, we generate a new quantified predicate chunk. The value map included in this heap chunk is defined for the given predicate. A lookup with the specified arguments denoted by \(v(\underline{e_1}, \dots, \underline{e_n})\) will return the generated snapshot.
 
 The symbolic execution rules for the operation fold can be seen in Figure \ref{qFold}.
 %fold
@@ -1013,32 +1015,99 @@ The symbolic execution rules for the operation fold can be seen in Figure \ref{q
 \ident \textbf{return} \( (h_2, \pi_{n+2}) \)  \\
 \}\\ \hline
 \caption[Unfold  a Quantified Predicate Permission]
-   {Symbolic execution rules for folding a quantified predicate. This adaption is only needed for predicates, which are quantified at some point in the given program. It exhales the predicate body and generates a new quantified chunk which holds the snapshot generated before exhaling the body.}
+   {Symbolic execution rules for folding a quantified predicate. This adaption is only needed for predicates, which are quantified at some point in the given program. It exhales the predicate body and generates a new quantified chunk which holds the snapshot generated before exhaling the body. }
 \label{qFold}
 \end{longtable}
 
 %silicon
 
 \subsection{Implementation}
-We implemented both approaches presented. The approach for verification condition generation is implemented in Carbon and does not differ from the approach.
+We implemented both approaches presented. The approach for verification condition generation is implemented in Carbon and does not differ from the approach except that no injectivity assertion is executed when inhaling a quantified permission. In Carbon, injectivity is assumed. Potentially this assumption could be removed. The performance is however generally better if the injectivity assumptions is included.
 
-The approach for symbolic execution is implemented in Silicon. There are a few subtle differences between the approach and the implementation. As for quantified field permission, Silicon analyses the program given, creating a list of quantified predicates. Additionally, it also precomputes a set of predicate arguments used to express the general predicate locations in quantified heap chunks and assertions generated, as well as a general snapshot. The predicate arguments added to the state.
+The approach for symbolic execution is implemented in Silicon. There are a few subtle differences between the approach and the implementation. As for quantified field permission, Silicon analyses the program given, creating a list of quantified predicates. Additionally, it also precomputes a set of predicate arguments used to express the general predicate locations in quantified heap chunks and assertions generated, as well as a general snapshot.
 Exhaling a single predicate instance provides the snapshot of that predicate. Removing a certain permission amount is implemented - as for quantified field permissions - as a combination of the presented functions remove and summarise. This is straightforward, since both iterate through the quantified predicate chunks filtered by the predicate name.
+The snapshot of represented as a snapshot term. The size of the snapshot depends on the predicate's body definition.
 
 \subsubsection{Issues}
-Triggering Sequences
+While testing the implementation, we found the following issues currently occurring which are relevant for quantified predicate permissions.
+ 
+The first issue occurs when unfolding predicates in a quantified assertion. The information held by the predicate is not accessible in the following example:
 
-Quantified unfolding
+\begin{lstlisting}
+field f: Int
+
+predicate p2(r:Ref)
+{
+    acc(r.f) && r.f == 5
+}
+
+method m3(x1: Ref, x2:Ref)
+requires acc(p2(x1))
+requires acc(p2(x2))
+{
+    //:: UnexpectedOutput(assert.failed:assertion.false, /Carbon/issue/158/)
+    assert forall r:Ref :: r in Set(x1, x2) ==> unfolding p2(r) in r.f == 5
+}
+\end{lstlisting}
+When unfolding a single quantified predicate, this error does not occur.
+
+In addition, we found a triggering problem currently occurring for both quantified field and predicate permissions in both verifiers. The program inhales a set of quantified predicate permission including arithmetic operations, but cannot assert to possess the permission when exhaling a single or multiple permissions without the same arithmetic expression:
+
+\begin{lstlisting}
+field val: Int
+
+domain IArray {
+  function loc(a: IArray, i: Int): Ref
+  function loc_limited(a: IArray, i: Int): Ref
+  function len(a: IArray): Int
+  function first(r: Ref): IArray
+  function second(r: Ref): Int
+
+  axiom limited {
+    forall a: IArray, i: Int :: {loc(a, i)}
+      loc(a,i) == loc_limited(a,i)
+  }
+
+  axiom all_diff {
+    forall a: IArray, i: Int :: {loc(a, i)}
+      first(loc(a, i)) == a && second(loc(a, i)) == i
+  }
+
+  axiom length_nonneg {
+    forall a: IArray :: len(a) >= 0
+  }
+}
+
+predicate p(a: IArray, i:Int)
+{
+	acc(loc(a, i).val)
+}
+
+method m1(a: IArray, n: Int, i1: Int, i2:Int)
+  requires n > 3
+  requires forall i: Int :: i in [0..n) ==> acc(p(a, i+1))
+   //:: UnexpectedOutput(postcondition.violated:insufficient.permission)
+  ensures  acc(p(a, 1))
+{}
+
+method m2(a: IArray, n: Int, i1: Int, i2:Int)
+  requires n > 3
+  requires forall i: Int :: i in [0..n) ==> acc(loc(a, i+1).val)
+   //:: UnexpectedOutput(postcondition.violated:insufficient.permission)
+  ensures  forall i: Int :: i in [1..n+1) ==> acc(loc(a, i).val)
+{}
+\end{lstlisting}
+We suspect that in this particular case, the triggers defined for the inverse functions do not allow to evaluate whether or not a specific value satisfies the condition.
 
 %Quantified Magic Wands
 \section{Quantified Magic Wands}
 \label{qmw}
-A magic wand instance is represented by a set of arguments, which depend on the syntactic structure and the parameters of the magic wand. As for predicates, the number of arguments and their type may vary for each magic wand instance, but is the same for a specific magic wand. As a consequence, the definition for the inverse function and the injectivity test is defined analogous to quantified predicate permissions.
+A magic wand instance is represented by a set of arguments which depend on the syntactic structure and the parameters of the magic wand. As for predicates, the number of arguments and their type may vary for each magic wand instance, but is the same for a specific magic wand. Therefore the definition for the inverse function and the injectivity test are defined analogous to quantified predicate permissions.
 
 In verification condition generation, a magic wand instance is represented in the form \textit{wand}\((a_1, \dots, a_n)\), where \textit{wand} is a function returning the wand location for the given arguments and \(a_i\) represents the ith argument of the magic wand representation. Contrary to predicates, \textit{wand} is used for all magic wands regardless of difference in structure. For example, the permission of the magic wand \(x\ in\ xs \wand acc(x.f)\) is represented as Mask[\(null, wand(Seq\#Contains(xs, x), x, FullPerm)\)], where the arguments stand for \(x\ in\ xs\), \(x.f\), and the implicit full permission of \(x.f\).
-The translation of inhaling and exhaling a quantified magic wand is therefore done analogously to the translation in Figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with the function \textit{wand} and the argument expressions correspond to the quantified magic wand argument. As for the ghost operations of predicates, there is no need to adapt the the translations of \textit{apply} and \textit{package}.
+The translation of inhaling and exhaling a quantified magic wand is therefore done analogously to the translation in Figure \ref{qpcInhale} and \ref{qpcExhale}, where the predicate name is replaced with the function \textit{wand} and the argument expressions correspond to the quantified magic wand argument. As for the ghost operations of predicates, there is no need to adapt the translations of \textit{apply} and \textit{package}.
 
-Also the symbolic execution rules of quantified predicates can be reused for quantified magic wand permissions. Same as for quantified predicates, we need to introduce a new type of heap chunk for magic wands, define functions for inhaling and exhaling quantified and unquantified magic wands. If the functions \textit{apply} and \textit{package} are not desugared into inhaling and exhaling expressions, which is the case in Silicon, we need to adapt the implementations of both ghost operations to evaluate the permissions and values using the defined quantified magic wand chunks. Contrary to quantified field and predicate permissions, we cannot filter the quantified magic wand chunks by predicate or field names. We have to analyse the type of the arguments to decide which magic wands should be included when summarising values or removing permissions. The adaption of the implementations of section \ref{SymbolicPredicates} should however be straightforward.
+Also, the symbolic execution rules of quantified predicates can be reused for quantified magic wand permissions. Same as for quantified predicates, we need to introduce a new type of heap chunk for magic wands, define functions for inhaling and exhaling quantified and unquantified magic wands. If the functions \textit{apply} and \textit{package} are not desugared into inhaling and exhaling expressions, which is the case in Silicon, we need to adapt the implementations of both ghost operations to evaluate the permissions and values using the defined quantified magic wand chunks. Contrary to quantified field and predicate permissions, we cannot filter the quantified magic wand chunks by predicate or field names. We have to analyse the type of the arguments to decide which magic wands should be included when summarising values or removing permissions. The adaption of the implementations of Section \ref{SymbolicPredicates} should however be straightforward.
 
 %Combinations of Quantifiers
 \section{Combinations of Quantifiers}
@@ -1154,7 +1223,7 @@ The implementation for supporting the combinations presented uses the rewriting 
 %Nested Quantifiers
 \section{Nested Quantifiers}
 \label{nq}
-In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in section \ref{rewriting}, there are two forms of nested quantifiers we decided to support.
+In this section we present another adaption removing the restriction that a quantified permission may depend on one variable only. After applying the rewriting rules given in Section \ref{rewriting}, there are two forms of nested quantifiers we decided to support.
 
 In the first structure, all variables are defined upfront, allowing condition and expression to depend on all of them:\\
 
@@ -1187,9 +1256,9 @@ Both formulas allow us to define more complex quantifiers, for example access ri
 \label{combinations}
 \end{longtable}
 
-To support these nested quantifiers, we need to adapt the presented solution for quantified field, predicate and magic wands. How these approaches have to be adapted, is described in section \ref{multipleVars}. Additionally, we introduce a new rewriting rule for truly nested quantifiers  in section \ref{rewritesN}.
+To support these nested quantifiers, we need to adapt the presented solution for quantified field, predicate and magic wands. How these approaches have to be adapted, is described in Section \ref{multipleVars}. Additionally, we introduce a new rewriting rule for truly nested quantifiers  in Section \ref{rewritesN}.
 
-\subsection{Multiple quantifier variables}
+\subsection{Multiple Quantifier Variables}
 \label{multipleVars}
 For both verification condition generation and symbolic execution, the representation of the general location used to express the updated permission does not change. There is no need to change the definition of the symbolic heap chunks. The translation of the original quantifier to the representation used in the heap, however, does. Again, we need a way to retrieve the original variables using inverse functions. In order to do that, we introduce \(n\) inverse functions, each inverse function mapping from a general location to the value of one variable.
 
@@ -1325,31 +1394,36 @@ The rewriting rules are displayed in Table \ref{nRewriting}.
 
 \section{Evaluation}
 \label{evaluation}
-In order to evaluate the performance of the support for quantified predicates and combinations in Viper, we ran a set of Viper programs with both Carbon and Silicon.
+In order to evaluate the performance of the support for quantified predicates and combinations in Viper, we ran several sets of Viper programs in Carbon and Silicon.
 
-The first test set includes various basic functionality tests for quantified predicates. They check the proper inhaling and exhaling, as well as the correct behavior of the ghost-operations. The second test case includes simple examples for combinations of quantifiers. We extracted two more elaborate test cases which are included in the appendix. \textit{list.sil} holds an implementation of a set of lists. The example \textit{two\_blocks\_array} specifies a predicate defining access rights to two consecutive array locations. In total, 27 files were included.
-%test files
-%The first set of test file test the implementation of quantified predicates for different number of predicate arguments and snapshot size. qqpprod\_arity tests inhaling quantified predicate permissions, spprod\_arity inhaling single predicate permissions for quantified predicates. The same distinction is made for exhaling predicates. Additionally there is a test for the operations fold, unfold and unfolding.
+The first set of tests checks the functionality of all operations defined for quantified predicates. This includes inhaling and exhaling quantified and unquantified predicate permissions for predicates which are at some point quantified over. Additionally, it tests the functionality of the ghost operations \textit{fold}, \textit{unfold} as well as \textit{unfolding}. All operations are executed for different numbers of arguments and snapshot elements.
 
-%Generally speaking, Silicon verifies a bit faster than Carbon. Inhaling a single quantified predicate permission runs faster in Carbon, since it treats them same as a single unquantified predicate permission.
+The second test set consists of 11 basic test cases, which for example include injectivity checks and partial permissions. The third set includes 6 test cases based on combinations of quantifiers. We extracted two more elaborate test cases which are included in the appendix. The program \textit{list.sil} holds an implementation of a set of lists. The example \textit{two\_blocks\_array} specifies a predicate defining access rights to two consecutive array locations. In total, 26 tests were included.
 
-The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 16GB RAM, running Windows 10 x64 with SSD. The measurements are shown in Table \ref{timings}. The measured time corresponds to the average of 100 runs, where . The startup time of JVM are not included. The standard-deviation for the test cases was negligible.
+The experiments were measured on a machine with an Intel Core i7-4700HQ 2.4GHz, 16GB RAM, running Windows 10 x64 with SSD. The measurements are shown in Table \ref{timings}. The measured time corresponds to the average of 20 runs, where the startup time of JVM is included. The standard-deviation for the test cases was negligible.
 
-\begin{longtable}{ | p{0.4\textwidth} | p{0.2\textwidth}| p{0.2\textwidth} | p{0.2\textwidth}|}
+\begin{longtable}{ | p{0.3\textwidth} | p{0.1\textwidth}| p{0.1\textwidth} | p{0.1\textwidth}| p{0.12\textwidth}|}
 \hline
-{\bf Program} & {\bf Size (LOC)} & {\bf Carbon RT(s) }&  {\bf Silicon RT (s)} \\ \hline
-basic test cases & 1214 & 1.330 & 1.326\\
-\hline combinations & 388 & 0.362 & 0.364\\
+{\bf Program} & {\bf Size (LOC)} & {\bf Carbon RT(s) }&  {\bf Silicon RT (s)}& {\bf \((C-S)/t\) (s)} \\ \hline
+quantified inhaling & 44 & 3.65 & 2.51 & 1.14\\
+quantified exhaling & 67 & 5.87 & 2.82 & 3.05\\
+single inhaling & 48 & 3.97 & 2.84 & 1.13\\
+single exhaling & 80 & 11.79 & 3.00 & 8.79\\ 
+unfold & 106 & 10.80 & 2.80 & 8.00\\ 
+fold & 108 & 9.26 & 2.88 & 6.38\\
+unfolding & 48 & 3.99 & 2.91 & 1.08\\ \hline 
+basic & 710 & 79.98 & 31.63 & 3.94\\
+\hline combinations & 387 & 45.89 & 19.24 & 4.44\\
 \hline
-list.sil & 61 & 0.074 & 0.073\\
-list\_false.sil & 63 & 0.075 & 0.074\\
-two\_blocks\_array.sil & 92 & 0.073 & 0.073\\
-
+list.sil & 61 & 4.63 & 3.66 & 0.97\\
+two\_blocks\_array.sil & 91 & 4.36 & 3.77 & 0.60\\
 \hline
 \caption[run-time measurements]
-   {This table corresponds to the time measurements taken for the given test set of quantified predicates.}
+   {This table corresponds to the time measurements taken for the given test set of quantified predicates. The first entry shortly describes the test cases described. The size is described by the lines of code of the test case. The run-time measurements are expressed as the average of 20 runs. The last column represents the difference in run-time per test case.}
 \label{timings}
 \end{longtable}
+Looking at the overall test results, we observe that the absolute run-time including the JVM start-up are greater for Carbon than for Silicon. This could potentially be due to the start-up time of JVM, which is included in the measurements. Assuming that the start-up time is constant for the same project and the run-time would be the same for all test cases, the difference between the run-time of Carbon and Silicon would be constant. This is however not the case. Whereas Carbon seems to be relatively faster for longer test cases, the difference in run-time is not very big for the examples given.
+Additionally we observe that the difference between maximum and minimum of the average of run-times presented varies significantly in Carbon, whereas the run-time of Silicon seems to be more stable for different test cases.
 
 \section{Conclusion an Future Work}
 This project generalised the support for quantified field permissions, adapting the solutions implemented in Silicon and Carbon to support quantified predicate and magic wand permissions. Additionally, we described the modifications to these approaches necessary to allow nested quantified permissions. To improve user-friendliness, we additionally provided four rewriting rules. These rules allow omitting a condition on declaration, the combination of pure and permission-based quantifiers as well as multiple nested forall statements. We implemented quantified predicate permissions and the first three rewriting rules introduced for combinations of quantifiers in both verifiers of Viper.
@@ -1360,21 +1434,13 @@ As future work, the implementation could be extended to include quantified magic
 \bibliography{report}
 \newpage
 \section{Appendix}
-\subsection{A}
-This section holds various small remarks to the impementations of quantified permissions in Silicon and Carbon.
+\subsection{Correction for wilcard support within Quantified permissions in Carbon}
+Even though not mentioned in the report so far, when inhaling or exhaling quantified permissions, additional expressions are generated if the permission expression contains a wildcard permission. When inhaling, the wildcard is assumed to be some arbitrary value. When exhaling, we constrain the value of the wildcard to be smaller than the permission held for all locations. 
 
-\subsection{Wilcards within Quantified permissions in Carbon}
-When inhaling, the wildcard is assumed to be some arbitrary value. 
+The original implementation of quantified field permission was not checking whether we possess any permission to the set of fields indicated by the quantifier. This resulted in defining the wildcard to zero in some cases. As a consequence, it was possible to exhale permissions using wildcards in all cases. As a correction, we added a check, asserting that for all locations satisfying the condition, we possess a strictly positive permission.
 
-When exhaling, we define constrain the value of the wildcard to be smaller than the permission held for all locations. The implementation was not checking whether we possess any permission to the set of fields indicated by the quantifier. As a consequence, it was possible to exhale permissions to using wildcards in all cases.
-
-As a correction, we added a check, asserting that for all locations satisfying the condition, we possess a strictly positive permission among.
-
-\subsection{Injectivity Checks}
-For both Silicon and Carbon injectivity is not checked when inhaling a quantified permission. In Carbon, injectivity is assumed. Potentially this assumption could be removed. The performance is however potentially better if the injectivity assumptions is included.
-
-\subsection{B}
-The following example of a Viper program uses both quantified predicates and combination of predicates. The predicate \textit{list} represents a list of length \(i\), where each node has an integer value. The method m1 takes a set of lists and sets the values to the given parameter for all nodes, doing so by walking through the set and modifying one element before switching the list. The example corresponds to the test case \(list.sil\).
+\subsection{Examples}
+The following example of a Viper program uses both quantified predicates and combination of predicates. The predicate \textit{list} represents a list of length \(i\), where each node has an integer value. The method \textit{m1} takes a set of lists and sets the values to the given parameter for all nodes, doing so by walking through the set and modifying one element before switching the list. The example corresponds to the test case \(list.sil\).
 \begin{lstlisting}
 field val:Int
 field next:Ref
@@ -1439,7 +1505,7 @@ ensures forall r: Ref :: r in lists ==> acc(list(r, length)) && allSet(r, length
 }
 \end{lstlisting}
 
-The second example, which is also included in the test run as \textit{two\_block\_array.sil}, describes  an array, which is accessed by predicates. The predicate \(access\) takes an array and an index of that array. If the index is an even number, it grants access to the array location of that index as well as the next one. The method \textit{totalSum} calculates the sum of all elements from the given even index \(i\) to the end of the array. The \textit{setVal} method sets the value of all entries of the given array from index \(i\) until the end, two at a time. The function \textit{setVal2} sets a new value to all entries from index \(i\) until the next write would be over the bounds of the array. 
+The second example, which is also included in the test run as \textit{two\_block\_array.sil}, describes  an array. The access rights to the fields of that array are defined by a predicate. The predicate \(access\) takes an array and an index. If the index is even, it grants access to the array location of that index as well as the next one. The method \textit{totalSum} calculates the sum of all elements from the given even index \(i\) to the end of the array. The \textit{setVal} method sets the value of all entries of the given array from index \(i\) until the end, two at a time. The function \textit{setVal2} sets a new value to all entries from index \(i\) until the next write would be over the bounds of the array. 
 \\
 \begin{lstlisting}
 predicate access(a:IArray, i:Int) {
